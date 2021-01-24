@@ -15,3 +15,7 @@ var url = "https://www.example.org/";
 var appColor = Colors.blue;
 ```
 3. Build the APK with gradle
+
+
+## Dependencies
+- webview_flutter: ^0.3.0
