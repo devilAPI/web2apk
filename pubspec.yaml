@@ -1,0 +1,20 @@
+name: flutter_webview
+description: An example Flutter application to demonstrate WebView widget.
+ 
+version: 1.0.0+1
+ 
+environment:
+  sdk: ">=2.1.0 <3.0.0"
+ 
+dependencies:
+  flutter:
+    sdk: flutter
+  webview_flutter: ^0.3.0
+  cupertino_icons: ^0.1.2
+ 
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+ 
+flutter:
+  uses-material-design: true
