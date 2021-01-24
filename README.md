@@ -1,6 +1,6 @@
 # Website to APK
 
-A new Flutter project.
+Putting a website into an App using the worlds most basic code, using standard android webview
 
 ## Getting Started
 
