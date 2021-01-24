@@ -3,9 +3,9 @@ import 'package:webview_flutter/webview_flutter.dart';
 
 void main() => runApp(MyApp());
 
-var appName = "devilAPI App for Isi";
-var url = "https://www.google.com/";
-var appColor = Colors.brown;
+var appName = "MyAppName";
+var url = "https://www.example.org/";
+var appColor = Colors.blue;
 
 class MyApp extends StatelessWidget {
   WebViewController _controller;
