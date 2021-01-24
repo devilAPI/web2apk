@@ -6,7 +6,7 @@ Putting a website into an App using the worlds most basic code, using standard a
 
 How to use:
 
-1. Locate main.dart
+1. Locate main.dart (/lib/main.dart)
 2. Change these Variables to fit your Needs:
 
 ```Dart
@@ -16,9 +16,7 @@ var appColor = Colors.blue;
 ```
 3. Build the APK with gradle
 
-
 ## Dependencies
 - webview_flutter: ^0.3.0
 
-
-Please dont ask why i used flutter. I know its stupid for this kind of project.
+Please dont ask why i used flutter. I know its stupid for this kind of project. I'm currently learning the flutter basics, thats why i did that. This is also probably not gonna get updated since its already done
