@@ -10,7 +10,7 @@ How to use:
 2. Change these Variables to fit your Needs:
 
 ```Dart
-var appName = "devilAPI App for Isi";
-var url = "https://www.google.com/";
-var appColor = Colors.brown;```
+var appName = "MyAppName";
+var url = "https://www.example.org/";
+var appColor = Colors.blue;
 ```
