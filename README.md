@@ -9,8 +9,8 @@ How to use:
 1. Locate main.dart
 2. Change these Variables to fit your Needs:
 
-´´´
+```Dart
 var appName = "devilAPI App for Isi";
 var url = "https://www.google.com/";
-var appColor = Colors.brown;
-´´´
+var appColor = Colors.brown;```
+```
