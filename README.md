@@ -14,3 +14,4 @@ var appName = "MyAppName";
 var url = "https://www.example.org/";
 var appColor = Colors.blue;
 ```
+3. Build the APK with gradle
