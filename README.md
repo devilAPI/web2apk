@@ -6,7 +6,7 @@ Putting a website into an App using the worlds most basic code, using standard a
 
 How to use:
 
-1. Locate main.dart
+1. Locate main.dart (/lib/main.dart)
 2. Change these Variables to fit your Needs:
 
 ```Dart
