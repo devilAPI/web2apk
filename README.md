@@ -18,5 +18,3 @@ var appColor = Colors.blue;
 
 ## Dependencies
 - webview_flutter: ^0.3.0
-
-Please dont ask why i used flutter. I know its stupid for this kind of project. I'm currently learning the flutter basics, thats why i did that. This is also probably not gonna get updated since its already done
