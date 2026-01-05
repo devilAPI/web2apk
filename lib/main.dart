@@ -6,8 +6,8 @@ import 'package:webview_flutter/webview_flutter.dart';
 
 void main() => runApp(MyApp());
 
-var appName = "MyAppName";
-var url = "https://www.example.org/";
+var appName = "lab-iptv";
+var url = "https://yflix.to/";
 var appColor = Colors.blue;
 
 class MyApp extends StatelessWidget {
