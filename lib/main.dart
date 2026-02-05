@@ -7,7 +7,7 @@ import 'package:webview_flutter/webview_flutter.dart';
 void main() => runApp(MyApp());
 
 var appName = "PW";
-var url = "https://streamfiles.org";
+var url = "https://streamfiles.eu.org";
 var appColor = Colors.black;
 
 class MyApp extends StatelessWidget {
