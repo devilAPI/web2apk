@@ -6,8 +6,8 @@ import 'package:webview_flutter/webview_flutter.dart';
 
 void main() => runApp(MyApp());
 
-var appName = "MyAppName";
-var url = "https://www.example.org/";
+var appName = "attendance tracker";
+var url = "https://arothajefin-lgtm.github.io/Attendance-Tracker/";
 var appColor = Colors.blue;
 
 class MyApp extends StatelessWidget {
