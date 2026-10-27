@@ -13,6 +13,9 @@ import 'result_page.dart';
 
 const _credit = 'Made by devilAPI with <3';
 const _repoUrl = 'https://github.com/devilAPI/web2apk';
+const _webKeyNotice =
+    'Your signing key is stored in this browser. Clearing site data loses it, '
+    'and apps you generated can then no longer be updated in place.';
 const _defaultColor = Color(0xFF2196F3);
 
 /// Single message for [compute]: records of non-sendable types are fine, but a
@@ -39,11 +42,15 @@ class GeneratorPage extends StatefulWidget {
     required this.actions,
     required this.loadKey,
     this.loadTemplate,
+    this.showWebKeyNotice = kIsWeb,
   });
 
   final ApkActions actions;
   final Future<SigningKey> Function() loadKey;
   final Future<Uint8List> Function()? loadTemplate;
+
+  /// Whether to warn that the signing key lives in browser storage.
+  final bool showWebKeyNotice;
 
   @override
   State<GeneratorPage> createState() => _GeneratorPageState();
@@ -221,6 +228,16 @@ class _GeneratorPageState extends State<GeneratorPage> {
           child: ListView(
             padding: const EdgeInsets.all(16),
             children: [
+              if (widget.showWebKeyNotice) ...[
+                Card(
+                  color: Theme.of(context).colorScheme.secondaryContainer,
+                  child: const Padding(
+                    padding: EdgeInsets.all(12),
+                    child: Text(_webKeyNotice),
+                  ),
+                ),
+                const SizedBox(height: 8),
+              ],
               TextField(
                 key: const Key('name-field'),
                 controller: _name,

@@ -37,4 +37,20 @@ void main() {
     await tester.pump();
     expect(find.textContaining('Allow installs from web2apk'), findsOneWidget);
   });
+
+  testWidgets('save cancelled shows no success SnackBar', (tester) async {
+    final a = FakeActions()..saveResult = false;
+    await pumpResult(tester, a);
+    await tester.tap(find.text('Save'));
+    await tester.pump();
+    expect(a.savedNames, ['A.apk']);
+    expect(find.text('Saved'), findsNothing);
+  });
+
+  testWidgets('save success shows SnackBar', (tester) async {
+    await pumpResult(tester, FakeActions());
+    await tester.tap(find.text('Save'));
+    await tester.pump();
+    expect(find.text('Saved'), findsOneWidget);
+  });
 }

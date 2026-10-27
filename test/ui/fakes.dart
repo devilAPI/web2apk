@@ -11,6 +11,7 @@ class FakeActions implements ApkActions {
   final bool canShare;
 
   InstallResult installResult = InstallResult.started;
+  bool saveResult = true;
   final saved = <Uint8List>[];
   final savedNames = <String>[];
   final installed = <String>[];
@@ -26,7 +27,7 @@ class FakeActions implements ApkActions {
   Future<bool> save(Uint8List apk, String fileName) async {
     saved.add(apk);
     savedNames.add(fileName);
-    return true;
+    return saveResult;
   }
 
   @override
