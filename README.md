@@ -49,9 +49,13 @@ flutter run                 # or: flutter build apk / flutter build linux
 
 Tests that verify generated APKs use `apksigner`, `aapt2` and `zipalign` from the newest build-tools under `$ANDROID_HOME`.
 
-## Maintainer: release setup
+## Maintainer: releases and CI
 
-Tags matching `v*` build release artifacts and publish a GitHub release. The generator APK is signed with your own key, supplied through repository secrets:
+Every push to `master` runs `.github/workflows/dev-release.yml`: it tests, builds Android, Linux, Windows, macOS and the web app, and publishes a prerelease `dev-N` with all files plus `SHA256SUMS.txt`. The web app of the newest dev build is deployed to https://devilapi.github.io/web2apk/dev/.
+
+To make a full release, open a `dev-N` prerelease on GitHub and uncheck "pre-release". This republishes the web app at https://devilapi.github.io/web2apk/ (`.github/workflows/pages.yml`). One-time setup: Settings -> Pages -> Source: **GitHub Actions**.
+
+The Android APK is signed with your own key, supplied through repository secrets. Without them CI signs with a debug key (the release notes say so), and users must uninstall debug-signed builds before installing release-signed ones. Create a keystore with JDK 17-21:
 
 ```bash
 keytool -genkeypair -v -keystore release.jks -keyalg RSA -keysize 4096 -validity 36500 -alias web2apk
@@ -62,7 +66,7 @@ Also set the secrets `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` (`web2apk`
 
 **Back up `release.jks`.** Losing it means users must uninstall the generator before they can update it.
 
-For a local release build, create `android/key.properties` (gitignored) with `storeFile` (relative to `android/app`), `storePassword`, `keyAlias`, `keyPassword`. Without it, local builds fall back to the debug key; in CI (`CI=true`) a release build without it fails.
+For a local release build, create `android/key.properties` (gitignored) with `storeFile` (relative to `android/app`), `storePassword`, `keyAlias`, `keyPassword`; all four are required. Without the file, release builds fall back to the debug key. The macOS app is unsigned: right-click -> Open the first time.
 
 ## Credits and v1
 

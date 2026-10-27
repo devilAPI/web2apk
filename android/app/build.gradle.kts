@@ -11,6 +11,11 @@ val keyProperties = Properties().apply {
     if (keyPropertiesFile.exists()) keyPropertiesFile.inputStream().use { load(it) }
 }
 
+fun requiredKeyProperty(name: String): String =
+    requireNotNull(keyProperties.getProperty(name)?.takeIf { it.isNotBlank() }) {
+        "android/key.properties is missing '$name'"
+    }
+
 android {
     namespace = "de.devilapi.web2apk"
     compileSdk = flutter.compileSdkVersion
@@ -39,17 +44,17 @@ android {
     signingConfigs {
         if (keyPropertiesFile.exists()) {
             create("release") {
-                storeFile = file(keyProperties.getProperty("storeFile"))
-                storePassword = keyProperties.getProperty("storePassword")
-                keyAlias = keyProperties.getProperty("keyAlias")
-                keyPassword = keyProperties.getProperty("keyPassword")
+                storeFile = file(requiredKeyProperty("storeFile"))
+                storePassword = requiredKeyProperty("storePassword")
+                keyAlias = requiredKeyProperty("keyAlias")
+                keyPassword = requiredKeyProperty("keyPassword")
             }
         }
     }
 
     buildTypes {
         release {
-            // Release key from android/key.properties; debug key locally if absent.
+            // Release key from android/key.properties; debug key if absent (also in CI).
             signingConfig = if (keyPropertiesFile.exists()) {
                 signingConfigs.getByName("release")
             } else {
@@ -67,12 +72,4 @@ kotlin {
 
 flutter {
     source = "../.."
-}
-
-// CI must never ship a release APK signed with the debug key.
-gradle.taskGraph.whenReady {
-    val releaseRequested = allTasks.any { it.name.contains("Release", ignoreCase = true) }
-    if (System.getenv("CI") == "true" && releaseRequested && !keyPropertiesFile.exists()) {
-        throw GradleException("android/key.properties missing")
-    }
 }

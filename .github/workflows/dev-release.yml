@@ -1,0 +1,308 @@
+name: Dev build & release
+
+# Every push to master: build the template APK, test, build the app
+# (Android / Linux / Windows / macOS / web) and publish a prerelease tagged
+# dev-<run number> (dev-1, dev-2, ...). Can also be started by hand from the
+# Actions tab.
+#
+# Builds run alongside the tests; only the release waits for both, so nothing
+# untested is published. The web build goes to GitHub Pages (/dev/) as soon
+# as it and the app tests are done, without waiting for the other builds.
+#
+# Optional repository settings (Settings -> Secrets and variables -> Actions):
+#   secret   ANDROID_KEYSTORE_BASE64    base64 of the release keystore (release.jks).
+#   secret   ANDROID_KEYSTORE_PASSWORD  keystore password.
+#   secret   ANDROID_KEY_ALIAS          key alias inside the keystore.
+#   secret   ANDROID_KEY_PASSWORD       key password.
+#                      Without ANDROID_KEYSTORE_BASE64 the Android APK is signed
+#                      with a debug key (and the release notes say so).
+#
+# Required: Settings -> Pages -> Source: "GitHub Actions" (web deploy).
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+# A newer push cancels the running build, so a release always tags the newest
+# commit of master. (github.token gets HTTP 403 tagging an older commit whose
+# workflow files differ from master's.)
+concurrency:
+  group: dev-release
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  FLUTTER_VERSION: "3.47.5"
+  TAG: dev-${{ github.run_number }}
+  BUILD_NUMBER: ${{ github.run_number }}
+
+jobs:
+  build-template:
+    name: Build template APK
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - name: Build template
+        run: scripts/build_template.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: template-apk
+          path: assets/template.apk
+          if-no-files-found: error
+
+  test-app:
+    name: Test app
+    needs: build-template
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: template-apk
+          path: assets
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - name: Analyze and test
+        run: |
+          flutter pub get
+          flutter analyze
+          flutter test
+          flutter test --platform chrome
+
+  build-android:
+    name: Build Android
+    needs: build-template
+    runs-on: ubuntu-latest
+    outputs:
+      signed_with: ${{ steps.build.outputs.signed_with }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: template-apk
+          path: assets
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - name: Build APK
+        id: build
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            printf '%s' "$KEYSTORE_BASE64" | base64 -d > android/app/release.jks
+            {
+              printf 'storeFile=release.jks\n'
+              printf 'storePassword=%s\n' "$KEYSTORE_PASSWORD"
+              printf 'keyAlias=%s\n' "$KEY_ALIAS"
+              printf 'keyPassword=%s\n' "$KEY_PASSWORD"
+            } > android/key.properties
+            echo "signed_with=release" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::ANDROID_KEYSTORE_BASE64 not set: signing with the debug key"
+            echo "signed_with=debug" >> "$GITHUB_OUTPUT"
+          fi
+          flutter pub get
+          flutter build apk --release --build-number="$BUILD_NUMBER"
+          mkdir -p dist
+          cp build/app/outputs/flutter-apk/app-release.apk "dist/web2apk-${TAG}-android.apk"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist-android
+          path: dist/*
+          if-no-files-found: error
+
+  build-linux:
+    name: Build Linux
+    needs: build-template
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: template-apk
+          path: assets
+      # cached: a slow Ubuntu mirror once held this step up for 12 minutes
+      - name: Install Linux build dependencies
+        uses: awalsh128/cache-apt-pkgs-action@v1
+        with:
+          packages: clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev
+          version: 1
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - name: Build bundle
+        run: |
+          flutter pub get
+          flutter build linux --release --build-number="$BUILD_NUMBER"
+          mkdir -p dist
+          tar -czf "dist/web2apk-${TAG}-linux-x64.tar.gz" -C build/linux/x64/release/bundle .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist-linux
+          path: dist/*
+          if-no-files-found: error
+
+  build-web:
+    name: Build web
+    needs: build-template
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: template-apk
+          path: assets
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - name: Build web app
+        run: |
+          # base href stays "/"; the Pages workflow rewrites it for its sub-path
+          flutter pub get
+          flutter build web --release --build-number="$BUILD_NUMBER"
+          tool/web_cache_bust.sh build/web "$BUILD_NUMBER"
+          mkdir -p dist
+          (cd build/web && zip -qr "../../dist/web2apk-${TAG}-web.zip" .)
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist-web
+          path: dist/*
+          if-no-files-found: error
+
+  build-windows:
+    name: Build Windows
+    needs: build-template
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: template-apk
+          path: assets
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - name: Build app
+        run: |
+          flutter pub get
+          flutter build windows --release --build-number="$BUILD_NUMBER"
+          mkdir -p dist
+          (cd build/windows/x64/runner/Release && 7z a -tzip "$GITHUB_WORKSPACE/dist/web2apk-${TAG}-windows-x64.zip" . > /dev/null)
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist-windows
+          path: dist/*
+          if-no-files-found: error
+
+  build-macos:
+    name: Build macOS (unsigned)
+    needs: build-template
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: template-apk
+          path: assets
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - name: Build app (no code signing)
+        run: |
+          flutter pub get
+          flutter build macos --release --build-number="$BUILD_NUMBER"
+          mkdir -p dist
+          ditto -c -k --keepParent build/macos/Build/Products/Release/web2apk.app "dist/web2apk-${TAG}-macos.zip"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist-macos
+          path: dist/*
+          if-no-files-found: error
+
+  deploy-web:
+    name: Deploy web to /dev/
+    needs: [test-app, build-web]
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    uses: ./.github/workflows/pages.yml
+    with:
+      dev_web_artifact: dist-web
+
+  release:
+    name: Publish ${{ github.run_number }} as dev-${{ github.run_number }}
+    needs: [test-app, build-android, build-linux, build-web, build-windows, build-macos]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: dist-*
+          merge-multiple: true
+          path: dist
+      - name: Checksums
+        working-directory: dist
+        run: sha256sum * > SHA256SUMS.txt
+      - name: Create prerelease
+        env:
+          # untrusted text: only ever read through the environment
+          COMMIT_MSG: ${{ github.event.head_commit.message }}
+          SIGNED_WITH: ${{ needs.build-android.outputs.signed_with }}
+        run: |
+          short="${GITHUB_SHA::7}"
+          if [ "$SIGNED_WITH" = release ]; then
+            android="The Android APK is signed with the release key."
+          else
+            android="The Android APK is signed with a DEBUG key: add the ANDROID_KEYSTORE_* secrets. Users must uninstall debug-signed builds before installing release-signed ones."
+          fi
+          notes="Development build ${BUILD_NUMBER} of commit ${short}. Not for production.
+          ${android}
+          The macOS app is unsigned: right-click -> Open the first time.
+
+          ${COMMIT_MSG}"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            # re-run of the same workflow run: replace the files
+            gh release upload "$TAG" dist/* --clobber
+          else
+            gh release create "$TAG" dist/* \
+              --target "$GITHUB_SHA" \
+              --prerelease \
+              --title "Dev build ${BUILD_NUMBER} (${short})" \
+              --notes "$notes"
+          fi

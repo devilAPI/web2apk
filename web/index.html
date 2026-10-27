@@ -41,6 +41,27 @@
     For more details:
     * https://docs.flutter.dev/platform-integration/web/initialization
   -->
+  <script>
+    // GitHub Pages lets browsers cache index.html for 10 minutes, so a page
+    // opened again soon may be an older build. Ask for the deployed build,
+    // past every cache, and reload once onto it. CI fills in the build
+    // number (tool/web_cache_bust.sh); local builds skip the check.
+    (function () {
+      const build = '__BUILD_NUMBER__';
+      if (!/^[0-9]+$/.test(build)) return;
+      fetch('version.json', { cache: 'no-store' })
+        .then((r) => r.json())
+        .then((v) => {
+          const live = String(v.build_number);
+          let tried = null;
+          try { tried = sessionStorage.getItem('reloadedFor'); } catch (_) {}
+          if (live === build || tried === live) return;
+          try { sessionStorage.setItem('reloadedFor', live); } catch (_) {}
+          location.reload();
+        })
+        .catch(() => {});
+    })();
+  </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>
