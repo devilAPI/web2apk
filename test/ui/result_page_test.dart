@@ -8,9 +8,14 @@ import 'package:web2apk/src/ui/result_page.dart';
 import 'fakes.dart';
 
 void main() {
-  Future<void> pumpResult(WidgetTester tester, FakeActions a) => tester.pumpWidget(
+  Future<void> pumpResult(WidgetTester tester, FakeActions a) =>
+      tester.pumpWidget(
         MaterialApp(
-          home: ResultPage(apk: Uint8List.fromList([1, 2, 3]), fileName: 'A.apk', actions: a),
+          home: ResultPage(
+            apk: Uint8List.fromList([1, 2, 3]),
+            fileName: 'A.apk',
+            actions: a,
+          ),
         ),
       );
 

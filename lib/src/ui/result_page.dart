@@ -59,7 +59,8 @@ class ResultPage extends StatelessWidget {
                     label: const Text('Install'),
                     onPressed: () => _run(context, () async {
                       final r = await actions.install(apk, fileName);
-                      if (r == InstallResult.needsPermission && context.mounted) {
+                      if (r == InstallResult.needsPermission &&
+                          context.mounted) {
                         _snack(
                           context,
                           'Allow installs from web2apk in the settings, then tap Install again.',
