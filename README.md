@@ -1,15 +1,23 @@
 # web2apk
 
-Turn a website into an installable Android app. web2apk is a Flutter app that builds the APK **on your own device**, with no Android toolchain, Flutter or Gradle needed to use it. The generated app is a plain Android WebView (JavaScript on, links stay inside the app, back button walks the page history).
+<img src="docs/icon.png" alt="" width="96" align="right">
+
+Turn a website into an installable Android app. web2apk is a Flutter app that builds the APK **on your own device** (Android, Linux, Windows, macOS or in the browser), with no Android toolchain, Flutter or Gradle needed to use it. The generated app is a plain Android WebView (JavaScript on, links stay inside the app, back button walks the page history).
 
 <!-- screenshot placeholder: docs/screenshot.png -->
 
 ## Download
 
-Grab the latest build from the [Releases](https://github.com/devilAPI/web2apk/releases) page:
+**Web:** use it in the browser at https://devilapi.github.io/web2apk/ (newest development build: https://devilapi.github.io/web2apk/dev/).
 
-- `web2apk-android.apk` - the generator for Android 7.0+
-- `web2apk-linux-x64.tar.gz` - the generator for Linux (extract and run `web2apk`)
+**Apps:** grab a build from the [Releases](https://github.com/devilAPI/web2apk/releases) page (`N` is the build number):
+
+- `web2apk-dev-N-android.apk` - Android 7.0+
+- `web2apk-dev-N-linux-x64.tar.gz` - Linux (extract and run `web2apk`; the file picker needs `zenity`)
+- `web2apk-dev-N-windows-x64.zip` - Windows (extract and run `web2apk.exe`)
+- `web2apk-dev-N-macos.zip` - macOS (unsigned: right-click -> Open the first time)
+- `web2apk-dev-N-web.zip` - the web app, to host yourself
+- `SHA256SUMS.txt` - checksums of the files above
 
 ## Using it
 
@@ -18,19 +26,21 @@ Fill in the form and tap **Generate**:
 - **App name** - home-screen label and title-bar text
 - **URL** - the site to show (`https://` is added if you leave it out)
 - **Color** - title-bar color
-- **Icon** - an image from your gallery/files (center-cropped to a square)
+- **Icon** - an image from your gallery/files (center-cropped to a square); without one the app gets the web2apk globe icon
 - **Fullscreen** - hides only the title bar; the Android status bar stays visible
 - **Package** - shown as "Package: ... - tap to change". It is derived from the domain (`https://example.org` -> `org.example.web2apk`). Every app needs its own ID: two apps with the same ID replace each other, so change it if you build several apps for one domain.
 
 When the APK is ready:
 
 - **Install** (Android) opens the package installer
-- **Save** stores the APK wherever you choose
-- **Share** (Android) sends the APK to another app
+- **Save** stores the APK wherever you choose (a download in the browser)
+- **Share** (Android, macOS) sends the APK to another app
 
 Regenerating an app with the same package ID installs as an update over the old one.
 
-On Linux, the file picker needs `zenity` installed.
+### My apps
+
+Every generated app is remembered under **My apps** (the grid icon in the app bar) with its settings and a small copy of its icon. Tap one to load it back into the form, change what you like and tap **Generate** again: it keeps its package ID, so the new APK installs as an update. Deleting an entry only removes it from the list.
 
 ### Back up your signing key
 
@@ -38,7 +48,7 @@ Open the key icon in the generator's app bar to see your signing key's SHA-256 f
 
 ### Signing key caveat
 
-The generator creates a signing key on first use and stores it per install (shared preferences). Uninstalling or clearing the data of the generator **loses the key**. Apps regenerated afterwards are signed with a new key, so the old version of that app must be uninstalled before the new one can be installed.
+The generator creates a signing key on first use and stores it per install (shared preferences; browser storage on the web). Uninstalling or clearing the data of the generator **loses the key** unless you backed it up. Apps regenerated afterwards are signed with a new key, so the old version of that app must be uninstalled before the new one can be installed.
 
 ## Building from source
 
@@ -48,10 +58,10 @@ Requirements: Flutter 3.47.5, JDK 17+ and the Android SDK (`ANDROID_HOME` set).
 scripts/build_template.sh   # builds the template APK into assets/template.apk (gitignored)
 flutter pub get
 flutter test
-flutter run                 # or: flutter build apk / flutter build linux
+flutter run                 # or: flutter build apk / linux / windows / macos / web
 ```
 
-Tests that verify generated APKs use `apksigner`, `aapt2` and `zipalign` from the newest build-tools under `$ANDROID_HOME`.
+Tests that verify generated APKs use `apksigner`, `aapt2` and `zipalign` from the newest build-tools under `$ANDROID_HOME`; `flutter test --platform chrome` runs the browser-compatible tests. The icons are drawn by `tool/make_icons.py` (Pillow); rerun it and `scripts/build_template.sh` after changing the icon.
 
 ## Maintainer: releases and CI
 
