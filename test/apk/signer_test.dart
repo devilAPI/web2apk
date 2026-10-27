@@ -117,6 +117,10 @@ void main() {
       throwsFormatException,
     );
     expect(() => SigningKey.fromJson({...j, 'p': '3'}), throwsFormatException);
+    expect(
+      () => SigningKey.fromJson({...j, 'p': '1', 'q': j['n']}),
+      throwsFormatException,
+    );
   });
 
   test('apksigner verifies v2 signature', () async {

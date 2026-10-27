@@ -51,29 +51,36 @@ class SigningKey {
     required BigInt p,
     required BigInt q,
   }) {
-    // WebCrypto (BoringSSL) reduces d modulo lcm(p-1, q-1) while pointycastle
-    // derives the public exponent as d^-1 mod (p-1)(q-1), so a perfectly valid
-    // external d can make it yield a different e. Validate the parts and
-    // normalise d to the (p-1)(q-1) form, which signs identically.
-    final p1 = p - BigInt.one, q1 = q - BigInt.one;
-    if (n != p * q ||
-        (d * _e) % p1 != BigInt.one ||
-        (d * _e) % q1 != BigInt.one) {
-      throw const FormatException('SigningKey: inconsistent RSA values');
-    }
-    final dCanonical = _e.modInverse(p1 * q1);
-    final RSAPrivateKey priv;
-    try {
-      priv = RSAPrivateKey(n, dCanonical, p, q);
-    } catch (e) {
-      throw FormatException('SigningKey: inconsistent RSA values ($e)');
-    }
+    final priv = _validatedPrivateKey(n, d, p, q);
     final pub = RSAPublicKey(n, _e);
     return SigningKey._(
       priv,
       pub,
       _selfSignedCertificate(priv, pub, _secureRandom()),
     );
+  }
+
+  /// Checks that the parts form an RSA key with e = 65537 and returns it.
+  ///
+  /// WebCrypto (BoringSSL) reduces d modulo lcm(p-1, q-1) while pointycastle
+  /// derives the public exponent as d^-1 mod (p-1)(q-1), so a perfectly valid
+  /// external d can make it yield a different e. d is therefore validated
+  /// against p-1 and q-1 and normalised to the (p-1)(q-1) form, which signs
+  /// identically. Throws [FormatException] for inconsistent parts.
+  static RSAPrivateKey _validatedPrivateKey(
+    BigInt n,
+    BigInt d,
+    BigInt p,
+    BigInt q,
+  ) {
+    if (p <= BigInt.one || q <= BigInt.one || p == q || n != p * q) {
+      throw const FormatException('SigningKey: inconsistent RSA values');
+    }
+    final p1 = p - BigInt.one, q1 = q - BigInt.one;
+    if ((d * _e) % p1 != BigInt.one || (d * _e) % q1 != BigInt.one) {
+      throw const FormatException('SigningKey: inconsistent RSA values');
+    }
+    return RSAPrivateKey(n, _e.modInverse(p1 * q1), p, q);
   }
 
   /// SubjectPublicKeyInfo DER of [publicKey] (as embedded in the certificate).
@@ -116,23 +123,7 @@ class SigningKey {
       throw const FormatException('SigningKey: "cert" is not base64');
     }
 
-    // WebCrypto (BoringSSL) reduces d modulo lcm(p-1, q-1) while pointycastle
-    // derives the public exponent as d^-1 mod (p-1)(q-1), so a perfectly valid
-    // external d can make it yield a different e. Validate the parts and
-    // normalise d to the (p-1)(q-1) form, which signs identically.
-    final p1 = p - BigInt.one, q1 = q - BigInt.one;
-    if (n != p * q ||
-        (d * _e) % p1 != BigInt.one ||
-        (d * _e) % q1 != BigInt.one) {
-      throw const FormatException('SigningKey: inconsistent RSA values');
-    }
-    final dCanonical = _e.modInverse(p1 * q1);
-    final RSAPrivateKey priv;
-    try {
-      priv = RSAPrivateKey(n, dCanonical, p, q);
-    } catch (e) {
-      throw FormatException('SigningKey: inconsistent RSA values ($e)');
-    }
+    final priv = _validatedPrivateKey(n, d, p, q);
     if (_certificateModulus(cert) != n) {
       throw const FormatException(
         'SigningKey: certificate does not match the key',

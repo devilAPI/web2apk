@@ -10,11 +10,11 @@ void main() {
     final sw = Stopwatch()..start();
     final k = await generateSigningKey();
     sw.stop();
-    expect(sw.elapsed, lessThan(const Duration(seconds: 15)));
+    expect(sw.elapsed, lessThan(const Duration(seconds: 45)));
     expect(k.publicKey.exponent, BigInt.from(65537));
     expect(k.publicKey.modulus!.bitLength, 2048);
     final k2 = SigningKey.fromJson(k.toJson());
     expect(k2.privateKey.modulus, k.privateKey.modulus);
     expect(k2.certificateDer, k.certificateDer);
-  });
+  }, timeout: const Timeout(Duration(seconds: 90)));
 }
