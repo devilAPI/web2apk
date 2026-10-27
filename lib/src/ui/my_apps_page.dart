@@ -44,7 +44,9 @@ class _MyAppsPageState extends State<MyAppsPage> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text('Delete ${app.name}?'),
-        content: const Text('It is only removed from this list. The APK you installed is not affected.'),
+        content: const Text(
+          'It is only removed from this list. The APK you installed is not affected.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),

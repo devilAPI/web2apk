@@ -108,9 +108,9 @@ void main() {
     expect(apps.single.packageId, 'org.example.web2apk');
   });
 
-  testWidgets('corrupt store on save still shows result and an error',
+  testWidgets('corrupt store is replaced by the new app on generate',
       (tester) async {
-    await pumpPage(tester, FakeActions(), prefs: {'saved_apps_v1': 'garbage'});
+    final store = await pumpPage(tester, FakeActions(), prefs: {'saved_apps_v1': 'garbage'});
     await enter(tester, 'name-field', 'Test');
     await enter(tester, 'url-field', 'example.org');
     await tester.tap(find.byKey(const Key('generate')));
@@ -121,7 +121,8 @@ void main() {
     }
     await tester.pump();
     expect(find.byType(ResultPage), findsOneWidget);
-    expect(find.textContaining('could not be saved'), findsOneWidget);
+    expect(find.textContaining('could not be saved'), findsNothing);
+    expect(store.load().map((a) => a.packageId), ['org.example.web2apk']);
   });
 
   Future<void> openMyApps(WidgetTester tester) async {

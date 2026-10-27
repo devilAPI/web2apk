@@ -113,10 +113,15 @@ class SavedAppsStore {
     ];
   }
 
-  /// Adds or replaces [app] (by package id) and moves it to the top. Throws
-  /// without writing when the stored value is corrupt.
+  /// Adds or replaces [app] (by package id) and moves it to the top. A corrupt
+  /// stored value is replaced by a list containing only [app].
   Future<void> upsert(SavedApp app) async {
-    final apps = load()..removeWhere((a) => a.packageId == app.packageId);
+    List<SavedApp> apps;
+    try {
+      apps = load()..removeWhere((a) => a.packageId == app.packageId);
+    } on FormatException {
+      apps = [];
+    }
     await _save([app, ...apps]);
   }
 

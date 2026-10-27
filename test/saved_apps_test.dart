@@ -112,18 +112,20 @@ void main() {
     );
   });
 
-  test(
-    'corrupt value: load throws, upsert/remove throw and preserve',
-    () async {
-      const bad = '{not json';
-      final s = await newStore({'saved_apps_v1': bad});
-      expect(s.load, throwsFormatException);
-      await expectLater(s.upsert(app('a.b')), throwsFormatException);
-      await expectLater(s.remove('a.b'), throwsFormatException);
-      final prefs = await SharedPreferences.getInstance();
-      expect(prefs.getString('saved_apps_v1'), bad);
-    },
-  );
+  test('corrupt value: load and remove throw and preserve it', () async {
+    const bad = '{not json';
+    final s = await newStore({'saved_apps_v1': bad});
+    expect(s.load, throwsFormatException);
+    await expectLater(s.remove('a.b'), throwsFormatException);
+    final prefs = await SharedPreferences.getInstance();
+    expect(prefs.getString('saved_apps_v1'), bad);
+  });
+
+  test('upsert replaces a corrupt value with [app]', () async {
+    final s = await newStore({'saved_apps_v1': '{not json'});
+    await s.upsert(app('a.b'));
+    expect(s.load().map((a) => a.packageId), ['a.b']);
+  });
 
   test('wrong-shaped JSON is also a FormatException', () async {
     for (final v in ['{"a":1}', '[1]', '[{"name":1}]']) {
