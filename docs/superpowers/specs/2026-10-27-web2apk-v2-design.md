@@ -188,3 +188,14 @@ before the generator UI.**
   an emulator/device, shows the right URL, name, icon, color, and fullscreen
   behavior; two generated apps with different domains coexist; regenerating
   updates in place.
+
+## Phase 3 (designer-defined; owner delegated it, 2026-10-27)
+
+Generator-side only, the generated app is unchanged:
+- **My apps:** every generated app's settings (name, URL, color, fullscreen,
+  package ID, 192px icon) are remembered; one tap loads them back into the form
+  so regenerating keeps the same package ID and installs as an update.
+- **Signing-key backup/restore:** export the key as `web2apk-signing-key.json`
+  (with a "keep it private" warning), restore it on another device/browser,
+  and show the key's SHA-256 fingerprint. This lifts the earlier "no key
+  export/import" non-goal, which was scoped to the first version.
