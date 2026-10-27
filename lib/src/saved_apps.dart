@@ -8,6 +8,7 @@ import 'apk/icons.dart';
 
 const _kPrefsKey = 'saved_apps_v1';
 const _kStoredIconSize = 192;
+const _corrupt = FormatException('Saved apps are corrupt');
 
 /// One remembered generated app (form data + a small icon), so it can be
 /// regenerated with the same package id.
@@ -73,15 +74,6 @@ class SavedApp {
     'icon': icon == null ? null : base64Encode(icon!),
     'updatedAt': updatedAt.toUtc().toIso8601String(),
   };
-
-  AppSpec toSpec() => AppSpec(
-    name: name,
-    url: url,
-    color: color,
-    fullscreen: fullscreen,
-    packageId: packageId,
-    icon: icon,
-  );
 }
 
 /// Persists saved apps (newest first, unique by package id) in
@@ -94,22 +86,19 @@ class SavedAppsStore {
   List<SavedApp> load() {
     final raw = _prefs.get(_kPrefsKey);
     if (raw == null) return [];
-    if (raw is! String) throw const FormatException('Saved apps are corrupt');
+    if (raw is! String) throw _corrupt;
     final Object? decoded;
     try {
       decoded = jsonDecode(raw);
     } on FormatException {
-      throw const FormatException('Saved apps are corrupt');
+      throw _corrupt;
     }
     if (decoded is! List) {
-      throw const FormatException('Saved apps are corrupt');
+      throw _corrupt;
     }
     return [
       for (final e in decoded)
-        if (e is Map<String, dynamic>)
-          SavedApp.fromJson(e)
-        else
-          throw const FormatException('Saved apps are corrupt'),
+        if (e is Map<String, dynamic>) SavedApp.fromJson(e) else throw _corrupt,
     ];
   }
 

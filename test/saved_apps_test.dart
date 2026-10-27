@@ -77,12 +77,6 @@ void main() {
     expect(c.icon, isNull);
   });
 
-  test('toSpec maps fields', () {
-    final spec = app('a.b', icon: Uint8List.fromList([9])).toSpec();
-    expect(spec.packageId, 'a.b');
-    expect(spec.icon, [9]);
-  });
-
   test('fromSpec downscales a 4000x4000 icon to 192x192 PNG', () {
     final big = img.Image(width: 4000, height: 4000)
       ..clear(img.ColorRgba8(10, 200, 30, 255));
