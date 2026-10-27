@@ -8,6 +8,7 @@ import '../apk/apk_builder.dart';
 import '../apk/app_spec.dart';
 import '../apk/icons.dart';
 import '../apk/signing_key.dart';
+import '../apk/template_contract.dart';
 import '../apk_actions.dart';
 import '../saved_apps.dart';
 import 'key_page.dart';
@@ -21,8 +22,7 @@ const _webKeyNotice =
     'and apps you generated can then no longer be updated in place.';
 const _defaultColor = Color(0xFF2196F3);
 
-/// Single message for [compute]: records of non-sendable types are fine, but a
-/// named class keeps the isolate entry point readable.
+/// Everything the build isolate needs, sent through [compute] as one message.
 class _BuildJob {
   const _BuildJob(this.template, this.spec, this.key);
   final Uint8List template;
@@ -32,6 +32,25 @@ class _BuildJob {
 
 Uint8List _buildInIsolate(_BuildJob job) =>
     buildApk(template: job.template, spec: job.spec, key: job.key);
+
+/// Decodes [bytes] as an icon; returns the error message, or null if usable.
+String? _iconProblem(Uint8List bytes) {
+  try {
+    squarePng(bytes, kIconSizes['mdpi']!);
+    return null;
+  } on FormatException catch (e) {
+    return e.message;
+  }
+}
+
+/// An image file picked by the user.
+typedef PickedImage = ({Uint8List bytes, String name});
+
+Future<PickedImage?> _pickImageFile() async {
+  final file = await FilePicker.pickFile(type: FileType.image);
+  if (file == null) return null;
+  return (bytes: await file.readAsBytes(), name: file.name);
+}
 
 /// App name with characters outside `[A-Za-z0-9 _-]` removed, plus `.apk`.
 String apkFileName(String name) {
@@ -48,6 +67,7 @@ class GeneratorPage extends StatefulWidget {
     required this.savedApps,
     this.initial,
     this.loadTemplate,
+    this.pickIcon = _pickImageFile,
     this.showWebKeyNotice = kIsWeb,
   });
 
@@ -59,6 +79,9 @@ class GeneratorPage extends StatefulWidget {
   /// A remembered app to prefill the form with.
   final SavedApp? initial;
   final Future<Uint8List> Function()? loadTemplate;
+
+  /// Lets the user choose an icon image; null if cancelled.
+  final Future<PickedImage?> Function() pickIcon;
 
   /// Whether to warn that the signing key lives in browser storage.
   final bool showWebKeyNotice;
@@ -186,19 +209,25 @@ class _GeneratorPageState extends State<GeneratorPage> {
   }
 
   Future<void> _pickIcon() async {
-    final file = await FilePicker.pickFile(type: FileType.image);
-    if (file == null) return;
-    final bytes = await file.readAsBytes();
+    final PickedImage image;
+    final String? problem;
     try {
-      renderLauncherIcons(bytes, const ['mipmap-mdpi']);
-    } on FormatException catch (e) {
-      setState(() => _iconError = e.message);
+      final picked = await widget.pickIcon();
+      if (picked == null) return;
+      image = picked;
+      // Decoding a large image takes a while: keep it off the UI isolate.
+      problem = await compute(_iconProblem, image.bytes);
+    } catch (e) {
+      if (mounted) setState(() => _iconError = 'Could not open the image: $e');
       return;
     }
+    if (!mounted) return;
     setState(() {
-      _icon = bytes;
-      _iconName = file.name;
-      _iconError = null;
+      _iconError = problem;
+      if (problem == null) {
+        _icon = image.bytes;
+        _iconName = image.name;
+      }
     });
   }
 
@@ -228,7 +257,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
       icon: _icon,
     );
     try {
-      setState(() => _progress = 'Creating signing key (first run only)…');
+      setState(() => _progress = 'Preparing…');
       final key = await widget.loadKey();
       final template =
           await (widget.loadTemplate ??

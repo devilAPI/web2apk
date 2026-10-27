@@ -1,10 +1,13 @@
 @TestOn('vm')
 library;
 
+import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:image/image.dart' as img;
 import 'package:web2apk/src/apk/signing_key.dart';
 import 'package:web2apk/src/saved_apps.dart';
 import 'package:web2apk/src/ui/generator_page.dart';
@@ -319,6 +322,106 @@ void main() {
       tester.state<NavigatorState>(find.byType(Navigator)).pop();
       await tester.pumpAndSettle();
     }
+  });
+
+  Future<void> pumpWith(
+    WidgetTester tester, {
+    Future<SigningKey> Function()? loadKey,
+    Future<PickedImage?> Function()? pickIcon,
+  }) async {
+    final store = await memoryStore();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: GeneratorPage(
+          actions: FakeActions(),
+          savedApps: store,
+          loadKey: loadKey ?? () async => key,
+          replaceKey: (_) async {},
+          loadTemplate: () async => sdk.loadTemplate(),
+          pickIcon: pickIcon ?? () async => null,
+        ),
+      ),
+    );
+  }
+
+  /// Taps the icon tile and lets the background decode finish.
+  Future<void> pickIconAndWait(WidgetTester tester) async {
+    await tester.tap(find.text('Icon'));
+    for (
+      var i = 0;
+      i < 200 && find.text('Default icon').evaluate().isNotEmpty;
+      i++
+    ) {
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 50)),
+      );
+      await tester.pump();
+    }
+  }
+
+  testWidgets('build error shows a SnackBar and re-enables Generate', (
+    tester,
+  ) async {
+    await pumpWith(tester, loadKey: () async => throw StateError('boom'));
+    await enter(tester, 'name-field', 'Test');
+    await enter(tester, 'url-field', 'example.org');
+    await tester.tap(find.byKey(const Key('generate')));
+    await tester.pump();
+    await tester.pump();
+    expect(
+      find.text('Could not build the APK: Bad state: boom'),
+      findsOneWidget,
+    );
+    expect(find.byType(ResultPage), findsNothing);
+    expect(find.text('Generate'), findsOneWidget);
+  });
+
+  testWidgets('progress starts with a neutral label', (tester) async {
+    final pending = Completer<SigningKey>();
+    await pumpWith(tester, loadKey: () => pending.future);
+    await enter(tester, 'name-field', 'Test');
+    await enter(tester, 'url-field', 'example.org');
+    await tester.tap(find.byKey(const Key('generate')));
+    await tester.pump();
+    expect(find.text('Preparing…'), findsOneWidget);
+    expect(find.textContaining('signing key'), findsNothing);
+    pending.completeError(StateError('stop'));
+    await tester.pump();
+  });
+
+  testWidgets('invalid icon shows the decode error and keeps no icon', (
+    tester,
+  ) async {
+    await pumpWith(
+      tester,
+      pickIcon: () async =>
+          (bytes: Uint8List.fromList([1, 2, 3]), name: 'bad.png'),
+    );
+    await pickIconAndWait(tester);
+    expect(find.text('Not a supported image'), findsOneWidget);
+    expect(find.text('bad.png'), findsNothing);
+    expect(find.byType(Image), findsNothing);
+  });
+
+  testWidgets('valid icon is taken over', (tester) async {
+    final png = Uint8List.fromList(
+      img.encodePng(img.Image(width: 64, height: 64)),
+    );
+    await pumpWith(tester, pickIcon: () async => (bytes: png, name: 'ok.png'));
+    await pickIconAndWait(tester);
+    expect(find.text('ok.png'), findsOneWidget);
+    expect(find.byType(Image), findsOneWidget);
+  });
+
+  testWidgets('failing file picker shows an error instead of crashing', (
+    tester,
+  ) async {
+    await pumpWith(tester, pickIcon: () async => throw Exception('no access'));
+    await pickIconAndWait(tester);
+    expect(
+      find.text('Could not open the image: Exception: no access'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('Signing key action opens the key page', (tester) async {
