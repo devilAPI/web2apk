@@ -15,19 +15,13 @@ class MyAppsPage extends StatefulWidget {
 }
 
 class _MyAppsPageState extends State<MyAppsPage> {
-  List<SavedApp> _apps = const [];
+  late List<SavedApp> _apps = _load();
 
-  @override
-  void initState() {
-    super.initState();
-    _reload(initial: true);
-  }
-
-  void _reload({bool initial = false}) {
+  /// Reads the store; a corrupt value shows as an empty list plus a SnackBar.
+  List<SavedApp> _load() {
     try {
-      _apps = widget.store.load();
+      return widget.store.load();
     } on FormatException {
-      _apps = const [];
       // Context is not usable for a SnackBar until the first frame is built.
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
@@ -35,8 +29,8 @@ class _MyAppsPageState extends State<MyAppsPage> {
           const SnackBar(content: Text('Saved apps could not be read')),
         );
       });
+      return const [];
     }
-    if (!initial) setState(() {});
   }
 
   Future<void> _delete(SavedApp app) async {
@@ -65,7 +59,7 @@ class _MyAppsPageState extends State<MyAppsPage> {
     } on FormatException {
       // Corrupt store: nothing to remove; reload reports it.
     }
-    if (mounted) _reload();
+    if (mounted) setState(() => _apps = _load());
   }
 
   @override
