@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -40,6 +41,29 @@ void main() {
     expect(calls.length, 1);
     expect(again.publicKey.modulus, fixed.publicKey.modulus);
   });
+
+  test(
+    'concurrent callers get one key even if generators finish reversed',
+    () async {
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+      final other = SigningKey.fromJson(goldenKeyJson);
+      final gate1 = Completer<SigningKey>();
+      final gate2 = Completer<SigningKey>();
+      var n = 0;
+      Future<SigningKey> gen() => (n++ == 0 ? gate1 : gate2).future;
+      final a = loadOrCreateSigningKey(prefs, generate: gen);
+      final b = loadOrCreateSigningKey(prefs, generate: gen);
+      await Future<void>.delayed(Duration.zero);
+      gate2.complete(other);
+      gate1.complete(fixed);
+      final ka = await a;
+      final kb = await b;
+      expect(ka.publicKey.modulus, kb.publicKey.modulus);
+      expect(jsonEncode(ka.toJson()), prefs.getString('signing_key_v1'));
+      expect(n, 1);
+    },
+  );
 
   for (final bad in ['not json', '{"a":"b"}', '[1,2]']) {
     test('corrupt value "$bad" throws and is preserved', () async {

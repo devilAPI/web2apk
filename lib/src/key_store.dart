@@ -16,20 +16,44 @@ Future<SigningKey> loadOrCreateSigningKey(
   SharedPreferences prefs, {
   Future<SigningKey> Function()? generate,
 }) async {
-  if (prefs.containsKey(signingKeyPrefsKey)) {
-    try {
-      final raw = prefs.get(signingKeyPrefsKey);
-      if (raw is! String) throw const FormatException('not a string');
-      final decoded = jsonDecode(raw);
-      if (decoded is! Map<String, dynamic>) {
-        throw const FormatException('not a JSON object');
-      }
-      return SigningKey.fromJson(decoded);
-    } on FormatException catch (e) {
-      throw StateError('Stored signing key is unreadable: ${e.message}');
-    }
+  if (prefs.containsKey(signingKeyPrefsKey)) return _readStored(prefs);
+  // Two callers (Signing key page + Generate on first run) must not each
+  // generate a key: the later write would silently replace the first.
+  final running = _generating[prefs];
+  if (running != null) return running;
+  final future = _generateAndStore(prefs, generate ?? generateSigningKey);
+  _generating[prefs] = future;
+  try {
+    return await future;
+  } finally {
+    _generating[prefs] = null;
   }
-  final key = await (generate ?? generateSigningKey)();
+}
+
+final _generating = Expando<Future<SigningKey>>('signing key generation');
+
+SigningKey _readStored(SharedPreferences prefs) {
+  try {
+    final raw = prefs.get(signingKeyPrefsKey);
+    if (raw is! String) throw const FormatException('not a string');
+    final decoded = jsonDecode(raw);
+    if (decoded is! Map<String, dynamic>) {
+      throw const FormatException('not a JSON object');
+    }
+    return SigningKey.fromJson(decoded);
+  } on FormatException catch (e) {
+    throw StateError('Stored signing key is unreadable: ${e.message}');
+  }
+}
+
+Future<SigningKey> _generateAndStore(
+  SharedPreferences prefs,
+  Future<SigningKey> Function() generate,
+) async {
+  final key = await generate();
+  // Something else (another tab/isolate-free caller) may have stored a key
+  // while we were generating: that one wins, ours is discarded.
+  if (prefs.containsKey(signingKeyPrefsKey)) return _readStored(prefs);
   final ok = await prefs.setString(
     signingKeyPrefsKey,
     jsonEncode(key.toJson()),
