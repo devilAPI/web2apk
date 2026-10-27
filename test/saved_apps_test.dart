@@ -92,6 +92,8 @@ void main() {
     final d = img.decodePng(saved.icon!)!;
     expect((d.width, d.height), (192, 192));
     expect(saved.updatedAt, DateTime.utc(2026));
+    final pre = SavedApp.storedIcon(spec.icon!);
+    expect(SavedApp.fromSpec(spec, icon192: pre).icon, same(pre));
     expect(
       SavedApp.fromSpec(
         AppSpec(

@@ -35,14 +35,24 @@ class SavedApp {
     this.icon,
   });
 
-  /// Snapshot of [spec]; the icon is center-cropped and downscaled to 192x192.
-  factory SavedApp.fromSpec(AppSpec spec, {DateTime? now}) => SavedApp(
+  /// The stored icon for [icon]: center-cropped and downscaled to 192x192.
+  /// Slow for big images; callers may run it off the UI isolate.
+  static Uint8List storedIcon(Uint8List icon) =>
+      squarePng(icon, _kStoredIconSize);
+
+  /// Snapshot of [spec]; the icon is center-cropped and downscaled to 192x192
+  /// unless an already-downscaled [icon192] is given.
+  factory SavedApp.fromSpec(
+    AppSpec spec, {
+    DateTime? now,
+    Uint8List? icon192,
+  }) => SavedApp(
     name: spec.name,
     url: spec.url,
     color: spec.color,
     fullscreen: spec.fullscreen,
     packageId: spec.packageId,
-    icon: spec.icon == null ? null : squarePng(spec.icon!, _kStoredIconSize),
+    icon: spec.icon == null ? null : (icon192 ?? storedIcon(spec.icon!)),
     updatedAt: (now ?? DateTime.now()).toUtc(),
   );
 

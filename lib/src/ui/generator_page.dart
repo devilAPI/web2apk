@@ -21,6 +21,7 @@ const _repoUrl = 'https://github.com/devilAPI/web2apk';
 const _webKeyNotice =
     'Your signing key is stored in this browser. Clearing site data loses it, '
     'and apps you generated can then no longer be updated in place.';
+const _ownPackageId = 'de.devilapi.web2apk';
 const _defaultColor = Color(0xFF2196F3);
 
 /// Everything the build isolate needs, sent through [compute] as one message.
@@ -31,8 +32,14 @@ class _BuildJob {
   final SigningKey key;
 }
 
-Uint8List _buildInIsolate(_BuildJob job) =>
-    buildApk(template: job.template, spec: job.spec, key: job.key);
+/// The built APK plus the 192 px icon to remember (null: no custom icon).
+typedef _BuildResult = ({Uint8List apk, Uint8List? savedIcon});
+
+_BuildResult _buildInIsolate(_BuildJob job) {
+  final apk = buildApk(template: job.template, spec: job.spec, key: job.key);
+  final icon = job.spec.icon;
+  return (apk: apk, savedIcon: icon == null ? null : SavedApp.storedIcon(icon));
+}
 
 /// Decodes [bytes] as an icon; returns the error message, or null if usable.
 String? _iconProblem(Uint8List bytes) {
@@ -119,6 +126,18 @@ class _GeneratorPageState extends State<GeneratorPage> {
     _iconName = app.icon == null ? null : 'Saved icon';
     _iconError = null;
     _manualPackage = app.packageId;
+  }
+
+  /// Back to an empty form with the package derived from the URL again.
+  void _reset() {
+    _name.clear();
+    _url.clear();
+    _color = _defaultColor;
+    _fullscreen = false;
+    _icon = null;
+    _iconName = null;
+    _iconError = null;
+    _manualPackage = null;
   }
 
   Future<void> _openMyApps() async {
@@ -263,12 +282,15 @@ class _GeneratorPageState extends State<GeneratorPage> {
                   (await rootBundle.load('assets/template.apk')).buffer
                       .asUint8List())();
       if (mounted) setState(() => _progress = 'Building APK…');
-      final apk = await compute(
+      final built = await compute(
         _buildInIsolate,
         _BuildJob(template, spec, key),
       );
+      final apk = built.apk;
       try {
-        await widget.savedApps.upsert(SavedApp.fromSpec(spec));
+        await widget.savedApps.upsert(
+          SavedApp.fromSpec(spec, icon192: built.savedIcon),
+        );
       } catch (e) {
         // The APK is built; a failed save must not keep it from the user.
         _showError('The app could not be saved to My apps: $e');
@@ -307,14 +329,19 @@ class _GeneratorPageState extends State<GeneratorPage> {
         title: const Text('web2apk'),
         actions: [
           IconButton(
+            icon: const Icon(Icons.add),
+            tooltip: 'New app',
+            onPressed: busy ? null : () => setState(_reset),
+          ),
+          IconButton(
             icon: const Icon(Icons.apps),
             tooltip: 'My apps',
-            onPressed: _openMyApps,
+            onPressed: busy ? null : _openMyApps,
           ),
           IconButton(
             icon: const Icon(Icons.key),
             tooltip: 'Signing key',
-            onPressed: _openKeyPage,
+            onPressed: busy ? null : _openKeyPage,
           ),
           IconButton(
             icon: const Icon(Icons.info_outline),
@@ -445,7 +472,8 @@ class _PackageDialogState extends State<_PackageDialog> {
   @override
   Widget build(BuildContext context) {
     final text = _controller.text.trim();
-    final ok = isValidPackageId(text);
+    final own = text == _ownPackageId;
+    final ok = isValidPackageId(text) && !own;
     return AlertDialog(
       title: const Text('Package name'),
       content: TextField(
@@ -456,6 +484,8 @@ class _PackageDialogState extends State<_PackageDialog> {
         decoration: InputDecoration(
           errorText: ok
               ? null
+              : own
+              ? 'This ID belongs to web2apk itself'
               : 'Use dot-separated segments like org.example.app',
         ),
       ),

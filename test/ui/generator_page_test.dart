@@ -431,4 +431,70 @@ void main() {
     expect(find.byType(KeyPage), findsOneWidget);
     expect(find.text(key.certificateSha256), findsOneWidget);
   });
+
+  testWidgets('New app resets a loaded saved app to defaults', (tester) async {
+    await pumpPage(
+      tester,
+      FakeActions(),
+      prefs: {
+        'saved_apps_v1': savedJson([
+          saved('Shop', 'https://shop.example.com', 'org.example.shop'),
+        ]),
+      },
+    );
+    await openMyApps(tester);
+    await tester.tap(find.text('Shop'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('org.example.shop'), findsOneWidget);
+    await tester.tap(find.byTooltip('New app'));
+    await tester.pumpAndSettle();
+    String text(String k) =>
+        tester.widget<TextField>(find.byKey(Key(k))).controller!.text;
+    expect(text('name-field'), isEmpty);
+    expect(text('url-field'), isEmpty);
+    expect(
+      tester.widget<SwitchListTile>(find.byType(SwitchListTile)).value,
+      isFalse,
+    );
+    expect(find.text('Default icon'), findsOneWidget);
+    expect(find.textContaining('org.example.shop'), findsNothing);
+    await enter(tester, 'url-field', 'other.com');
+    expect(find.textContaining('com.other.web2apk'), findsOneWidget);
+  });
+
+  testWidgets('AppBar actions are disabled while building', (tester) async {
+    final pending = Completer<SigningKey>();
+    await pumpWith(tester, loadKey: () => pending.future);
+    await enter(tester, 'name-field', 'Test');
+    await enter(tester, 'url-field', 'example.org');
+    await tester.tap(find.byKey(const Key('generate')));
+    await tester.pump();
+    for (final tip in ['My apps', 'Signing key', 'New app']) {
+      final button = tester.widget<IconButton>(
+        find.widgetWithIcon(IconButton, switch (tip) {
+          'My apps' => Icons.apps,
+          'Signing key' => Icons.key,
+          _ => Icons.add,
+        }),
+      );
+      expect(button.onPressed, isNull, reason: tip);
+    }
+    pending.completeError(StateError('stop'));
+    await tester.pump();
+  });
+
+  testWidgets('package dialog rejects the generator\'s own id', (tester) async {
+    await pumpPage(tester, FakeActions());
+    await enter(tester, 'url-field', 'example.org');
+    await tester.tap(find.byKey(const Key('package-tile')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('package-field')),
+      'de.devilapi.web2apk',
+    );
+    await tester.pump();
+    expect(find.text('This ID belongs to web2apk itself'), findsOneWidget);
+    final ok = tester.widget<TextButton>(find.widgetWithText(TextButton, 'OK'));
+    expect(ok.onPressed, isNull);
+  });
 }
