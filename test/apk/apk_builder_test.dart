@@ -89,6 +89,26 @@ void main() {
     );
   });
 
+  test('v1 signature files in the template are dropped', () {
+    final sigNames = [
+      'META-INF/MANIFEST.MF',
+      'META-INF/CERT.SF',
+      'META-INF/CERT.RSA',
+    ];
+    final signedTemplate = writeZip([
+      ...readZip(template),
+      for (final n in sigNames) ZipEntry.stored(n, Uint8List.fromList([1])),
+      ZipEntry.stored('META-INF/keep.txt', Uint8List.fromList([2])),
+    ]);
+    final names = entries(
+      buildApk(template: signedTemplate, spec: spec(), key: key),
+    ).keys;
+    for (final n in sigNames) {
+      expect(names, isNot(contains(n)));
+    }
+    expect(names, contains('META-INF/keep.txt'));
+  });
+
   test('empty name / bad package id throw ArgumentError', () {
     expect(
       () => buildApk(
