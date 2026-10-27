@@ -1,7 +1,7 @@
 name: Dev build & release
 
 # Every push to master: build the template APK, test, build the app
-# (Android / Linux / Windows / macOS / web) and publish a prerelease tagged
+# (Android / Linux / Windows / macOS / iOS / web) and publish a prerelease tagged
 # dev-<run number> (dev-1, dev-2, ...). Can also be started by hand from the
 # Actions tab.
 #
@@ -254,6 +254,34 @@ jobs:
           path: dist/*
           if-no-files-found: error
 
+  build-ios:
+    name: Build iOS (unsigned)
+    needs: build-template
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: template-apk
+          path: assets
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - name: Build app (no code signing)
+        run: |
+          flutter pub get
+          flutter build ios --release --no-codesign --build-number="$BUILD_NUMBER"
+          mkdir -p Payload dist
+          cp -R build/ios/iphoneos/Runner.app Payload/
+          zip -qry "dist/web2apk-${TAG}-ios-unsigned.ipa" Payload
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist-ios
+          path: dist/*
+          if-no-files-found: error
+
   deploy-web:
     name: Deploy web to /dev/
     needs: [test-app, build-web]
@@ -267,7 +295,7 @@ jobs:
 
   release:
     name: Publish ${{ github.run_number }} as dev-${{ github.run_number }}
-    needs: [test-app, build-android, build-linux, build-web, build-windows, build-macos]
+    needs: [test-app, build-android, build-linux, build-web, build-windows, build-macos, build-ios]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -298,6 +326,7 @@ jobs:
           notes="Development build ${BUILD_NUMBER} of commit ${short}. Not for production.
           ${android}
           The macOS app is unsigned: right-click -> Open the first time.
+          The iOS .ipa is unsigned: sideload it (AltStore, Sideloadly, ...); it cannot install Android apps, use Save or Share.
 
           ${COMMIT_MSG}"
           if gh release view "$TAG" >/dev/null 2>&1; then

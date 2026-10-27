@@ -72,6 +72,17 @@ def main():
             f"macos/Runner/Assets.xcassets/AppIcon.appiconset/app_icon_{px}.png",
         )
 
+    # iOS: full-bleed opaque square (iOS rounds the corners; no alpha allowed).
+    ios = "ios/Runner/Assets.xcassets/AppIcon.appiconset"
+    for pt, scales in ((20, (1, 2, 3)), (29, (1, 2, 3)), (40, (1, 2, 3)),
+                       (60, (2, 3)), (76, (1, 2)), (83.5, (2,)), (1024, (1,))):
+        for k in scales:
+            name = f"{pt:g}x{pt:g}@{k}x"
+            save(
+                draw(round(pt * k), rounded=False, globe=0.56).convert("RGB"),
+                f"{ios}/Icon-App-{name}.png",
+            )
+
     ico_sizes = [16, 24, 32, 48, 64, 128, 256]
     draw(256).save(
         "windows/runner/resources/app_icon.ico",

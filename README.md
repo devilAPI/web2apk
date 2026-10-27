@@ -2,7 +2,7 @@
 
 <img src="docs/icon.png" alt="" width="96" align="right">
 
-Turn a website into an installable Android app. web2apk is a Flutter app that builds the APK **on your own device** (Android, Linux, Windows, macOS or in the browser), with no Android toolchain, Flutter or Gradle needed to use it. The generated app is a plain Android WebView (JavaScript on, links stay inside the app, back button walks the page history).
+Turn a website into an installable Android app. web2apk is a Flutter app that builds the APK **on your own device** (Android, iOS, Linux, Windows, macOS or in the browser), with no Android toolchain, Flutter or Gradle needed to use it. The generated app is a plain Android WebView (JavaScript on, links stay inside the app, back button walks the page history).
 
 <!-- screenshot placeholder: docs/screenshot.png -->
 
@@ -16,6 +16,7 @@ Turn a website into an installable Android app. web2apk is a Flutter app that bu
 - `web2apk-dev-N-linux-x64.tar.gz` - Linux (extract and run `web2apk`; the file picker needs `zenity`)
 - `web2apk-dev-N-windows-x64.zip` - Windows (extract and run `web2apk.exe`)
 - `web2apk-dev-N-macos.zip` - macOS (unsigned: right-click -> Open the first time)
+- `web2apk-dev-N-ios-unsigned.ipa` - iOS 15+ for sideloading (AltStore, Sideloadly, ...); not on the App Store. An iPhone cannot install the APK, so use Save or Share to get it onto an Android device
 - `web2apk-dev-N-web.zip` - the web app, to host yourself
 - `SHA256SUMS.txt` - checksums of the files above
 
@@ -34,7 +35,7 @@ When the APK is ready:
 
 - **Install** (Android) opens the package installer
 - **Save** stores the APK wherever you choose (a download in the browser)
-- **Share** (Android, macOS) sends the APK to another app
+- **Share** (Android, iOS, macOS) sends the APK to another app
 
 Regenerating an app with the same package ID installs as an update over the old one.
 
@@ -64,14 +65,14 @@ Requirements: Flutter 3.47.5, JDK 17-21 (newer JDKs are too new for the Android 
 scripts/build_template.sh   # builds the template APK into assets/template.apk (gitignored)
 flutter pub get
 flutter test
-flutter run                 # or: flutter build apk / linux / windows / macos / web
+flutter run                 # or: flutter build apk / ios / linux / windows / macos / web
 ```
 
 Tests that verify generated APKs use `apksigner`, `aapt2` and `zipalign` from the newest build-tools under `$ANDROID_HOME`; `flutter test --platform chrome` runs the browser-compatible tests. The icons are drawn by `tool/make_icons.py` (Pillow); rerun it and `scripts/build_template.sh` after changing the icon.
 
 ## Maintainer: releases and CI
 
-Every push to `master` runs `.github/workflows/dev-release.yml`: it tests, builds Android, Linux, Windows, macOS and the web app, and publishes a prerelease `dev-N` with all files plus `SHA256SUMS.txt`. The web app of the newest dev build is deployed to https://devilapi.github.io/web2apk/dev/.
+Every push to `master` runs `.github/workflows/dev-release.yml`: it tests, builds Android, iOS, Linux, Windows, macOS and the web app, and publishes a prerelease `dev-N` with all files plus `SHA256SUMS.txt`. The web app of the newest dev build is deployed to https://devilapi.github.io/web2apk/dev/.
 
 Android version codes come from the workflow run number. Do not rename or recreate `dev-release.yml`: the counter would restart and new builds would count as downgrades.
 
@@ -88,7 +89,7 @@ Also set the secrets `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` (`web2apk`
 
 **Back up `release.jks`.** Losing it means users must uninstall the generator before they can update it.
 
-For a local release build, create `android/key.properties` (gitignored) with `storeFile` (relative to `android/app`), `storePassword`, `keyAlias`, `keyPassword`; all four are required. Without the file, release builds fall back to the debug key. The macOS app is unsigned: right-click -> Open the first time.
+For a local release build, create `android/key.properties` (gitignored) with `storeFile` (relative to `android/app`), `storePassword`, `keyAlias`, `keyPassword`; all four are required. Without the file, release builds fall back to the debug key. The macOS app is unsigned: right-click -> Open the first time. The iOS `.ipa` is unsigned too (`--no-codesign`); sideloading tools sign it with the user's own Apple ID.
 
 ## Credits and v1
 

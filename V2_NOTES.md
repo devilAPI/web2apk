@@ -3,7 +3,7 @@
 **State:** all work is on local branch `v2`. v1 is kept on local branch `legacy`. Nothing has been pushed.
 
 ## What it is
-A Flutter app for Android, Linux, Windows, macOS and the web. Users fill in name, URL, color, icon and fullscreen (fullscreen hides only the title bar) and get a signed **~12 KB** Android APK. The APK is built on the device itself, in pure Dart, with no compiler. Under the hood it patches a tiny Java WebView template (`template/`).
+A Flutter app for Android, iOS (unsigned .ipa for sideloading), Linux, Windows, macOS and the web. Users fill in name, URL, color, icon and fullscreen (fullscreen hides only the title bar) and get a signed **~12 KB** Android APK. The APK is built on the device itself, in pure Dart, with no compiler. Under the hood it patches a tiny Java WebView template (`template/`).
 Extras: **My apps** (one-tap regenerate with the same package ID, which installs as an update) and **Signing key** (backup, restore and fingerprint).
 
 ## To publish (your steps)
@@ -20,7 +20,7 @@ Extras: **My apps** (one-tap regenerate with the same package ID, which installs
 
 ## Not verified
 - The GitHub workflows have never run.
-- macOS and Windows builds (can't be built on Linux).
+- macOS, Windows and iOS builds (can't be built on Linux; CI only).
 - A real phone.
 
 ## Decisions I made for you (change any you dislike)
