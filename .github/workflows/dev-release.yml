@@ -110,11 +110,13 @@ jobs:
         run: |
           if [ -n "$KEYSTORE_BASE64" ]; then
             printf '%s' "$KEYSTORE_BASE64" | base64 -d > android/app/release.jks
+            # key.properties is a Java properties file: a backslash in a value
+            # starts an escape, so double every backslash.
             {
               printf 'storeFile=release.jks\n'
-              printf 'storePassword=%s\n' "$KEYSTORE_PASSWORD"
-              printf 'keyAlias=%s\n' "$KEY_ALIAS"
-              printf 'keyPassword=%s\n' "$KEY_PASSWORD"
+              printf 'storePassword=%s\n' "${KEYSTORE_PASSWORD//\\/\\\\}"
+              printf 'keyAlias=%s\n' "${KEY_ALIAS//\\/\\\\}"
+              printf 'keyPassword=%s\n' "${KEY_PASSWORD//\\/\\\\}"
             } > android/key.properties
             echo "signed_with=release" >> "$GITHUB_OUTPUT"
           else
@@ -297,8 +299,10 @@ jobs:
 
           ${COMMIT_MSG}"
           if gh release view "$TAG" >/dev/null 2>&1; then
-            # re-run of the same workflow run: replace the files
+            # re-run of the same workflow run: replace the files and the notes
+            # (the signing may differ from the first attempt)
             gh release upload "$TAG" dist/* --clobber
+            gh release edit "$TAG" --notes "$notes"
           else
             gh release create "$TAG" dist/* \
               --target "$GITHUB_SHA" \
