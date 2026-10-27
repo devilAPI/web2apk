@@ -66,8 +66,9 @@ List<ZipEntry> readZip(Uint8List bytes) {
       break;
     }
   }
-  if (eocd < 0)
+  if (eocd < 0) {
     throw const FormatException('ZIP end of central directory not found');
+  }
   final count = bd.getUint16(eocd + 10, Endian.little);
   var pos = bd.getUint32(eocd + 16, Endian.little);
 
