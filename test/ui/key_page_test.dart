@@ -32,7 +32,8 @@ void main() {
   }) => tester.pumpWidget(
     MaterialApp(
       home: KeyPage(
-        loadKey: () async => key,
+        // Like the real store: the last replaced key is what loads next.
+        loadKey: () async => replaced.isEmpty ? key : replaced.last,
         replaceKey: (k) async => replaced.add(k),
         actions: actions,
         pickFile: pickFile,
@@ -119,6 +120,7 @@ void main() {
           fileBytes({...other.toJson(), 'format': 'web2apk-signing-key-v1'}),
     );
     await tester.pumpAndSettle();
+    expect(find.text(key.certificateSha256), findsOneWidget);
     await tester.tap(find.text('Restore key'));
     await tester.pumpAndSettle();
     expect(find.text(restoreWarning), findsOneWidget);
@@ -129,6 +131,8 @@ void main() {
     await tester.pump(const Duration(milliseconds: 300));
     expect(replaced.single.privateKey.modulus, other.privateKey.modulus);
     expect(find.text('Signing key restored'), findsOneWidget);
+    expect(find.text(other.certificateSha256), findsOneWidget);
+    expect(find.text(key.certificateSha256), findsNothing);
   });
 
   testWidgets('restore cancelled at the confirm changes nothing', (
