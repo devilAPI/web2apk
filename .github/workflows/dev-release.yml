@@ -37,6 +37,8 @@ permissions:
 env:
   FLUTTER_VERSION: "3.47.5"
   TAG: dev-${{ github.run_number }}
+  # Android versionCode. Do not rename/recreate this workflow: run_number would
+  # restart and new builds would count as downgrades.
   BUILD_NUMBER: ${{ github.run_number }}
 
 jobs:

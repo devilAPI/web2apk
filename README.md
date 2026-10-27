@@ -46,9 +46,15 @@ Every generated app is remembered under **My apps** (the grid icon in the app ba
 
 Open the key icon in the generator's app bar to see your signing key's SHA-256 fingerprint, save it with **Back up key** (a `web2apk-signing-key.json` file), or load a saved file with **Restore key**. Anyone with that file can publish updates to your apps, so keep it private. Restoring replaces the current key; apps signed with the old one can then no longer be updated in place unless you restore it again. On the web the key lives in the browser, so back it up before clearing site data.
 
+### Web notes
+
+- The web key is stored per browser **and** per origin. `devilapi.github.io` is shared with other GitHub Pages apps, so clearing that site's data, or another app on the origin clearing its storage, deletes the key. Back it up.
+- Open only one tab on your first visit, so two tabs do not each create a key.
+- Self-hosting the web build needs HTTPS (WebCrypto requires a secure context).
+
 ### Signing key caveat
 
-The generator creates a signing key on first use and stores it per install (shared preferences; browser storage on the web). Uninstalling or clearing the data of the generator **loses the key** unless you backed it up. Apps regenerated afterwards are signed with a new key, so the old version of that app must be uninstalled before the new one can be installed.
+The generator creates a signing key on first use and stores it per install (shared preferences; browser storage on the web). Uninstalling or clearing the data of the generator **loses the key** unless Android's automatic backup restores it on reinstall or a new phone (it is enabled, but do not rely on it): back the key up via **Signing key** to be safe. Apps regenerated afterwards are signed with a new key, so the old version of that app must be uninstalled before the new one can be installed.
 
 ## Building from source
 
@@ -66,6 +72,8 @@ Tests that verify generated APKs use `apksigner`, `aapt2` and `zipalign` from th
 ## Maintainer: releases and CI
 
 Every push to `master` runs `.github/workflows/dev-release.yml`: it tests, builds Android, Linux, Windows, macOS and the web app, and publishes a prerelease `dev-N` with all files plus `SHA256SUMS.txt`. The web app of the newest dev build is deployed to https://devilapi.github.io/web2apk/dev/.
+
+Android version codes come from the workflow run number. Do not rename or recreate `dev-release.yml`: the counter would restart and new builds would count as downgrades.
 
 To make a full release, open a `dev-N` prerelease on GitHub and uncheck "pre-release". This republishes the web app at https://devilapi.github.io/web2apk/ (`.github/workflows/pages.yml`). One-time setup: Settings -> Pages -> Source: **GitHub Actions**.
 
