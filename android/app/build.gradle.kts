@@ -70,6 +70,11 @@ kotlin {
     }
 }
 
+dependencies {
+    // FileProvider (MainActivity): declared directly instead of relying on a plugin pulling it in.
+    implementation("androidx.core:core:1.18.0")
+}
+
 flutter {
     source = "../.."
 }
