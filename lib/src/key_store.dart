@@ -25,8 +25,8 @@ Future<SigningKey> loadOrCreateSigningKey(
         throw const FormatException('not a JSON object');
       }
       return SigningKey.fromJson(decoded);
-    } on FormatException {
-      throw StateError('Stored signing key is unreadable');
+    } on FormatException catch (e) {
+      throw StateError('Stored signing key is unreadable: ${e.message}');
     }
   }
   final key = await (generate ?? generateSigningKey)();

@@ -52,7 +52,7 @@ void main() {
           isA<StateError>().having(
             (e) => e.message,
             'message',
-            'Stored signing key is unreadable',
+            startsWith('Stored signing key is unreadable: '),
           ),
         ),
       );
@@ -60,6 +60,22 @@ void main() {
       expect(prefs.getString('signing_key_v1'), bad);
     });
   }
+
+  test('unreadable key error names the cause', () async {
+    SharedPreferences.setMockInitialValues({'signing_key_v1': '{"a":"b"}'});
+    final prefs = await SharedPreferences.getInstance();
+    await expectLater(
+      loadOrCreateSigningKey(prefs, generate: () async => fixed),
+      throwsA(
+        isA<StateError>().having(
+          (e) => e.message,
+          'message',
+          'Stored signing key is unreadable: '
+              'SigningKey: missing or non-string "n"',
+        ),
+      ),
+    );
+  });
 
   test('valid JSON with inconsistent key throws and is preserved', () async {
     final json = Map<String, String>.from(fixed.toJson());
