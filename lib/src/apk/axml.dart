@@ -27,6 +27,14 @@ class _Pool {
 }
 
 _Pool _parse(Uint8List axml) {
+  try {
+    return _parseUnchecked(axml);
+  } on RangeError {
+    throw const FormatException('Truncated or malformed binary XML');
+  }
+}
+
+_Pool _parseUnchecked(Uint8List axml) {
   if (axml.length < 8 + 28) throw const FormatException('AXML too short');
   final bd = ByteData.sublistView(axml);
   if (bd.getUint16(0, Endian.little) != _xmlType) {
