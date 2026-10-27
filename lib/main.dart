@@ -28,6 +28,12 @@ class Web2ApkApp extends StatelessWidget {
         useMaterial3: true,
         colorSchemeSeed: const Color(0xFF2196F3),
       ),
+      darkTheme: ThemeData(
+        useMaterial3: true,
+        brightness: Brightness.dark,
+        colorSchemeSeed: const Color(0xFF2196F3),
+      ),
+      themeMode: ThemeMode.dark,
       home: GeneratorPage(
         actions: PlatformApkActions(),
         savedApps: SavedAppsStore(prefs),

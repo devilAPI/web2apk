@@ -7,8 +7,10 @@ import 'package:web2apk/src/ui/generator_page.dart';
 import 'fakes.dart';
 
 const _notice =
-    'Your signing key is stored in this browser. Clearing site data loses it, '
-    'and apps you generated can then no longer be updated in place.';
+    'Your signing key is stored in this browser. Clearing site data loses it: '
+    'apps you generated can still be installed, but no longer updated in '
+    'place. For a key that lasts, install a web2apk build from the Releases '
+    'page, or back the key up via Signing key.';
 
 void main() {
   Future<void> pumpPage(WidgetTester tester, {bool? showWebKeyNotice}) async {
