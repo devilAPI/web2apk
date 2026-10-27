@@ -44,3 +44,11 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# web2apk v2
+/assets/template.apk
+/android/key.properties
+*.jks
+template/**/build/
+template/.gradle/
+template/local.properties
