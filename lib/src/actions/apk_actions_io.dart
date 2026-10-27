@@ -40,11 +40,19 @@ class PlatformApkActions implements ApkActions {
   /// macOS and Windows (its desktop backends write after the dialog), so the
   /// bytes must not be written again here.
   @override
-  Future<bool> save(Uint8List apk, String fileName) async {
+  Future<bool> save(Uint8List apk, String fileName) =>
+      saveFile(apk, fileName, mimeType: _apkMime);
+
+  @override
+  Future<bool> saveFile(
+    Uint8List bytes,
+    String fileName, {
+    String mimeType = 'application/octet-stream',
+  }) async {
     final result = await FilePicker.saveFile(
       fileName: fileName,
-      bytes: apk,
-      mimeType: _apkMime,
+      bytes: bytes,
+      mimeType: mimeType,
     );
     return result != null;
   }

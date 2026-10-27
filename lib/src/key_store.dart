@@ -37,3 +37,13 @@ Future<SigningKey> loadOrCreateSigningKey(
   if (!ok) throw StateError('Signing key could not be stored');
   return key;
 }
+
+/// Persists [key] as the signing key, replacing any stored value (including
+/// an unreadable one). Throws [StateError] if it could not be stored.
+Future<void> replaceSigningKey(SharedPreferences prefs, SigningKey key) async {
+  final ok = await prefs.setString(
+    signingKeyPrefsKey,
+    jsonEncode(key.toJson()),
+  );
+  if (!ok) throw StateError('Signing key could not be stored');
+}

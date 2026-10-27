@@ -13,5 +13,13 @@ abstract class ApkActions {
 
   /// Returns false when the user cancelled.
   Future<bool> save(Uint8List apk, String fileName);
+
+  /// Saves arbitrary [bytes] under [fileName]. Returns false when the user
+  /// cancelled.
+  Future<bool> saveFile(
+    Uint8List bytes,
+    String fileName, {
+    String mimeType = 'application/octet-stream',
+  });
   Future<void> share(Uint8List apk, String fileName);
 }

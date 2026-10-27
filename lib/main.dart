@@ -31,7 +31,8 @@ class Web2ApkApp extends StatelessWidget {
       home: GeneratorPage(
         actions: PlatformApkActions(),
         savedApps: SavedAppsStore(prefs),
-        loadKey: () async => loadOrCreateSigningKey(prefs),
+        loadKey: () => loadOrCreateSigningKey(prefs),
+        replaceKey: (key) => replaceSigningKey(prefs, key),
       ),
     );
   }

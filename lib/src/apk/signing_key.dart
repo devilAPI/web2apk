@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:math';
 import 'dart:typed_data';
 
+import 'package:crypto/crypto.dart' show sha256;
 import 'package:pointycastle/export.dart';
 import 'package:pointycastle/asn1.dart';
 
@@ -85,6 +86,14 @@ class SigningKey {
 
   /// SubjectPublicKeyInfo DER of [publicKey] (as embedded in the certificate).
   Uint8List get publicKeyDer => _subjectPublicKeyInfo(publicKey).encode();
+
+  /// SHA-256 of the certificate as uppercase hex pairs separated by colons;
+  /// the digest `apksigner verify --print-certs` prints.
+  String get certificateSha256 => sha256
+      .convert(certificateDer)
+      .bytes
+      .map((b) => b.toRadixString(16).padLeft(2, '0').toUpperCase())
+      .join(':');
 
   /// `n, d, p, q` as lowercase hex, `cert` as base64 DER.
   Map<String, String> toJson() => {

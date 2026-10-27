@@ -32,6 +32,10 @@ Regenerating an app with the same package ID installs as an update over the old 
 
 On Linux, the file picker needs `zenity` installed.
 
+### Back up your signing key
+
+Open the key icon in the generator's app bar to see your signing key's SHA-256 fingerprint, save it with **Back up key** (a `web2apk-signing-key.json` file), or load a saved file with **Restore key**. Anyone with that file can publish updates to your apps, so keep it private. Restoring replaces the current key; apps signed with the old one can then no longer be updated in place unless you restore it again. On the web the key lives in the browser, so back it up before clearing site data.
+
 ### Signing key caveat
 
 The generator creates a signing key on first use and stores it per install (shared preferences). Uninstalling or clearing the data of the generator **loses the key**. Apps regenerated afterwards are signed with a new key, so the old version of that app must be uninstalled before the new one can be installed.

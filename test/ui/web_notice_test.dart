@@ -17,10 +17,16 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: showWebKeyNotice == null
-            ? GeneratorPage(actions: FakeActions(), loadKey: noKey, savedApps: store)
+            ? GeneratorPage(
+                actions: FakeActions(),
+                loadKey: noKey,
+                replaceKey: (_) async {},
+                savedApps: store,
+              )
             : GeneratorPage(
                 actions: FakeActions(),
                 loadKey: noKey,
+                replaceKey: (_) async {},
                 savedApps: store,
                 showWebKeyNotice: showWebKeyNotice,
               ),

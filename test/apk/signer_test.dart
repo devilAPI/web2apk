@@ -40,6 +40,15 @@ void main() {
     return m!.group(1)!;
   }
 
+  test('certificateSha256 equals the apksigner digest', () async {
+    final printed = await certSha256(await signToFile(key, 'fp'));
+    expect(key.certificateSha256.replaceAll(':', '').toLowerCase(), printed);
+    expect(
+      key.certificateSha256,
+      matches(RegExp(r'^([0-9A-F]{2}:){31}[0-9A-F]{2}$')),
+    );
+  }, skip: noApksigner);
+
   test('json round-trip', () {
     final k2 = SigningKey.fromJson(key.toJson());
     expect(k2.privateKey.modulus, key.privateKey.modulus);

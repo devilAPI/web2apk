@@ -24,10 +24,18 @@ class PlatformApkActions implements ApkActions {
       throw UnsupportedError('Share is not available on web');
 
   @override
-  Future<bool> save(Uint8List apk, String fileName) async {
+  Future<bool> save(Uint8List apk, String fileName) =>
+      saveFile(apk, fileName, mimeType: _apkMime);
+
+  @override
+  Future<bool> saveFile(
+    Uint8List bytes,
+    String fileName, {
+    String mimeType = 'application/octet-stream',
+  }) async {
     final blob = web.Blob(
-      [apk.toJS].toJS,
-      web.BlobPropertyBag(type: _apkMime),
+      [bytes.toJS].toJS,
+      web.BlobPropertyBag(type: mimeType),
     );
     final url = web.URL.createObjectURL(blob);
     final anchor = web.HTMLAnchorElement()

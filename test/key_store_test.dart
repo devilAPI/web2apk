@@ -83,4 +83,15 @@ void main() {
     );
     expect(prefs.get('signing_key_v1'), 42);
   });
+
+  test('replaceSigningKey overwrites an existing or corrupt value', () async {
+    SharedPreferences.setMockInitialValues({'signing_key_v1': 'garbage'});
+    final prefs = await SharedPreferences.getInstance();
+    await replaceSigningKey(prefs, fixed);
+    final loaded = await loadOrCreateSigningKey(
+      prefs,
+      generate: () async => fail('must not generate'),
+    );
+    expect(loaded.publicKey.modulus, fixed.publicKey.modulus);
+  });
 }

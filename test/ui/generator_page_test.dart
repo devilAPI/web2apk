@@ -8,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:web2apk/src/apk/signing_key.dart';
 import 'package:web2apk/src/saved_apps.dart';
 import 'package:web2apk/src/ui/generator_page.dart';
+import 'package:web2apk/src/ui/key_page.dart';
 import 'package:web2apk/src/ui/my_apps_page.dart';
 import 'package:web2apk/src/ui/result_page.dart';
 
@@ -30,6 +31,7 @@ void main() {
           actions: actions,
           savedApps: store,
           loadKey: () async => key,
+          replaceKey: (_) async {},
           loadTemplate: () async => sdk.loadTemplate(),
         ),
       ),
@@ -40,15 +42,19 @@ void main() {
   String savedJson(List<SavedApp> apps) =>
       jsonEncode([for (final a in apps) a.toJson()]);
 
-  SavedApp saved(String name, String url, String pkg, {bool fullscreen = true}) =>
-      SavedApp(
-        name: name,
-        url: url,
-        color: 0xFF4CAF50,
-        fullscreen: fullscreen,
-        packageId: pkg,
-        updatedAt: DateTime.utc(2026, 1, 1),
-      );
+  SavedApp saved(
+    String name,
+    String url,
+    String pkg, {
+    bool fullscreen = true,
+  }) => SavedApp(
+    name: name,
+    url: url,
+    color: 0xFF4CAF50,
+    fullscreen: fullscreen,
+    packageId: pkg,
+    updatedAt: DateTime.utc(2026, 1, 1),
+  );
 
   Future<void> enter(WidgetTester tester, String field, String text) async {
     await tester.enterText(find.byKey(Key(field)), text);
@@ -66,7 +72,10 @@ void main() {
     await enter(tester, 'url-field', 'example.org');
     await tester.tap(find.byKey(const Key('package-tile')));
     await tester.pumpAndSettle();
-    await tester.enterText(find.byKey(const Key('package-field')), 'org.example.shop');
+    await tester.enterText(
+      find.byKey(const Key('package-field')),
+      'org.example.shop',
+    );
     await tester.pump();
     await tester.tap(find.text('OK'));
     await tester.pumpAndSettle();
@@ -81,7 +90,9 @@ void main() {
     await enter(tester, 'name-field', 'Test');
     await enter(tester, 'url-field', 'ftp://x');
     expect(find.textContaining('Unsupported URL scheme'), findsOneWidget);
-    final button = tester.widget<FilledButton>(find.byKey(const Key('generate')));
+    final button = tester.widget<FilledButton>(
+      find.byKey(const Key('generate')),
+    );
     expect(button.onPressed, isNull);
   });
 
@@ -92,8 +103,14 @@ void main() {
     await enter(tester, 'url-field', 'example.org');
     await tester.tap(find.byKey(const Key('generate')));
     await tester.pump();
-    for (var i = 0; i < 200 && find.byType(ResultPage).evaluate().isEmpty; i++) {
-      await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 100)));
+    for (
+      var i = 0;
+      i < 200 && find.byType(ResultPage).evaluate().isEmpty;
+      i++
+    ) {
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 100)),
+      );
       await tester.pump();
     }
     await tester.pumpAndSettle();
@@ -108,15 +125,26 @@ void main() {
     expect(apps.single.packageId, 'org.example.web2apk');
   });
 
-  testWidgets('corrupt store is replaced by the new app on generate',
-      (tester) async {
-    final store = await pumpPage(tester, FakeActions(), prefs: {'saved_apps_v1': 'garbage'});
+  testWidgets('corrupt store is replaced by the new app on generate', (
+    tester,
+  ) async {
+    final store = await pumpPage(
+      tester,
+      FakeActions(),
+      prefs: {'saved_apps_v1': 'garbage'},
+    );
     await enter(tester, 'name-field', 'Test');
     await enter(tester, 'url-field', 'example.org');
     await tester.tap(find.byKey(const Key('generate')));
     await tester.pump();
-    for (var i = 0; i < 200 && find.byType(ResultPage).evaluate().isEmpty; i++) {
-      await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 100)));
+    for (
+      var i = 0;
+      i < 200 && find.byType(ResultPage).evaluate().isEmpty;
+      i++
+    ) {
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 100)),
+      );
       await tester.pump();
     }
     await tester.pump();
@@ -130,13 +158,18 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('My apps lists apps; tap fills form and keeps package',
-      (tester) async {
-    await pumpPage(tester, FakeActions(), prefs: {
-      'saved_apps_v1': savedJson([
-        saved('Shop', 'https://shop.example.com', 'org.example.shop'),
-      ]),
-    });
+  testWidgets('My apps lists apps; tap fills form and keeps package', (
+    tester,
+  ) async {
+    await pumpPage(
+      tester,
+      FakeActions(),
+      prefs: {
+        'saved_apps_v1': savedJson([
+          saved('Shop', 'https://shop.example.com', 'org.example.shop'),
+        ]),
+      },
+    );
     await openMyApps(tester);
     expect(find.byType(MyAppsPage), findsOneWidget);
     expect(find.text('Shop'), findsOneWidget);
@@ -144,9 +177,24 @@ void main() {
     await tester.tap(find.text('Shop'));
     await tester.pumpAndSettle();
     expect(find.byType(MyAppsPage), findsNothing);
-    expect(tester.widget<TextField>(find.byKey(const Key('name-field'))).controller!.text, 'Shop');
-    expect(tester.widget<TextField>(find.byKey(const Key('url-field'))).controller!.text, 'https://shop.example.com');
-    expect(tester.widget<SwitchListTile>(find.byType(SwitchListTile)).value, isTrue);
+    expect(
+      tester
+          .widget<TextField>(find.byKey(const Key('name-field')))
+          .controller!
+          .text,
+      'Shop',
+    );
+    expect(
+      tester
+          .widget<TextField>(find.byKey(const Key('url-field')))
+          .controller!
+          .text,
+      'https://shop.example.com',
+    );
+    expect(
+      tester.widget<SwitchListTile>(find.byType(SwitchListTile)).value,
+      isTrue,
+    );
     expect(find.textContaining('org.example.shop'), findsOneWidget);
     await enter(tester, 'url-field', 'other.com');
     expect(find.textContaining('org.example.shop'), findsOneWidget);
@@ -155,16 +203,25 @@ void main() {
 
   testWidgets('initial prefills the form', (tester) async {
     final store = await memoryStore();
-    await tester.pumpWidget(MaterialApp(
-      home: GeneratorPage(
-        actions: FakeActions(),
-        loadKey: () async => key,
-        savedApps: store,
-        initial: saved('Shop', 'https://shop.example.com', 'org.example.shop'),
+    await tester.pumpWidget(
+      MaterialApp(
+        home: GeneratorPage(
+          actions: FakeActions(),
+          loadKey: () async => key,
+          replaceKey: (_) async {},
+          savedApps: store,
+          initial: saved(
+            'Shop',
+            'https://shop.example.com',
+            'org.example.shop',
+          ),
+        ),
       ),
-    ));
+    );
     expect(find.textContaining('org.example.shop'), findsOneWidget);
-    final button = tester.widget<FilledButton>(find.byKey(const Key('generate')));
+    final button = tester.widget<FilledButton>(
+      find.byKey(const Key('generate')),
+    );
     expect(button.onPressed, isNotNull);
   });
 
@@ -174,13 +231,18 @@ void main() {
     expect(find.text('No saved apps yet'), findsOneWidget);
   });
 
-  testWidgets('delete asks to confirm; cancel keeps, confirm removes',
-      (tester) async {
-    final store = await pumpPage(tester, FakeActions(), prefs: {
-      'saved_apps_v1': savedJson([
-        saved('Shop', 'https://shop.example.com', 'org.example.shop'),
-      ]),
-    });
+  testWidgets('delete asks to confirm; cancel keeps, confirm removes', (
+    tester,
+  ) async {
+    final store = await pumpPage(
+      tester,
+      FakeActions(),
+      prefs: {
+        'saved_apps_v1': savedJson([
+          saved('Shop', 'https://shop.example.com', 'org.example.shop'),
+        ]),
+      },
+    );
     await openMyApps(tester);
     await tester.tap(find.byTooltip('Delete'));
     await tester.pumpAndSettle();
@@ -197,10 +259,14 @@ void main() {
     expect(store.load(), isEmpty);
   });
 
-  testWidgets('corrupt store shows error and empty state, value kept',
-      (tester) async {
-    final store = await pumpPage(tester, FakeActions(),
-        prefs: {'saved_apps_v1': 'garbage'});
+  testWidgets('corrupt store shows error and empty state, value kept', (
+    tester,
+  ) async {
+    final store = await pumpPage(
+      tester,
+      FakeActions(),
+      prefs: {'saved_apps_v1': 'garbage'},
+    );
     await openMyApps(tester);
     expect(find.text('Saved apps could not be read'), findsOneWidget);
     expect(find.text('No saved apps yet'), findsOneWidget);
@@ -212,5 +278,54 @@ void main() {
     await tester.tap(find.byTooltip('About'));
     await tester.pumpAndSettle();
     expect(find.textContaining('Made by devilAPI with <3'), findsOneWidget);
+  });
+
+  testWidgets('every build loads the key again (no stale key after restore)', (
+    tester,
+  ) async {
+    final other = SigningKey.generate();
+    final keys = [key, other];
+    var calls = 0;
+    final store = await memoryStore();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: GeneratorPage(
+          actions: FakeActions(),
+          savedApps: store,
+          loadKey: () async => keys[calls++],
+          replaceKey: (_) async {},
+          loadTemplate: () async => sdk.loadTemplate(),
+        ),
+      ),
+    );
+    await enter(tester, 'name-field', 'Test');
+    await enter(tester, 'url-field', 'example.org');
+    for (var round = 1; round <= 2; round++) {
+      await tester.tap(find.byKey(const Key('generate')));
+      await tester.pump();
+      for (
+        var i = 0;
+        i < 200 && find.byType(ResultPage).evaluate().isEmpty;
+        i++
+      ) {
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 100)),
+        );
+        await tester.pump();
+      }
+      await tester.pumpAndSettle();
+      expect(find.byType(ResultPage), findsOneWidget);
+      expect(calls, round);
+      tester.state<NavigatorState>(find.byType(Navigator)).pop();
+      await tester.pumpAndSettle();
+    }
+  });
+
+  testWidgets('Signing key action opens the key page', (tester) async {
+    await pumpPage(tester, FakeActions());
+    await tester.tap(find.byTooltip('Signing key'));
+    await tester.pumpAndSettle();
+    expect(find.byType(KeyPage), findsOneWidget);
+    expect(find.text(key.certificateSha256), findsOneWidget);
   });
 }

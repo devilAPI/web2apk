@@ -10,6 +10,7 @@ import '../apk/icons.dart';
 import '../apk/signing_key.dart';
 import '../apk_actions.dart';
 import '../saved_apps.dart';
+import 'key_page.dart';
 import 'my_apps_page.dart';
 import 'result_page.dart';
 
@@ -43,6 +44,7 @@ class GeneratorPage extends StatefulWidget {
     super.key,
     required this.actions,
     required this.loadKey,
+    required this.replaceKey,
     required this.savedApps,
     this.initial,
     this.loadTemplate,
@@ -51,6 +53,7 @@ class GeneratorPage extends StatefulWidget {
 
   final ApkActions actions;
   final Future<SigningKey> Function() loadKey;
+  final Future<void> Function(SigningKey) replaceKey;
   final SavedAppsStore savedApps;
 
   /// A remembered app to prefill the form with.
@@ -107,6 +110,16 @@ class _GeneratorPageState extends State<GeneratorPage> {
       ),
     );
   }
+
+  Future<void> _openKeyPage() => Navigator.of(context).push(
+    MaterialPageRoute<void>(
+      builder: (_) => KeyPage(
+        loadKey: widget.loadKey,
+        replaceKey: widget.replaceKey,
+        actions: widget.actions,
+      ),
+    ),
+  );
 
   @override
   void dispose() {
@@ -217,12 +230,16 @@ class _GeneratorPageState extends State<GeneratorPage> {
     try {
       setState(() => _progress = 'Creating signing key (first run only)…');
       final key = await widget.loadKey();
-      final template = await (widget.loadTemplate ??
-          () async => (await rootBundle.load('assets/template.apk'))
-              .buffer
-              .asUint8List())();
+      final template =
+          await (widget.loadTemplate ??
+              () async =>
+                  (await rootBundle.load('assets/template.apk')).buffer
+                      .asUint8List())();
       if (mounted) setState(() => _progress = 'Building APK…');
-      final apk = await compute(_buildInIsolate, _BuildJob(template, spec, key));
+      final apk = await compute(
+        _buildInIsolate,
+        _BuildJob(template, spec, key),
+      );
       try {
         await widget.savedApps.upsert(SavedApp.fromSpec(spec));
       } catch (e) {
@@ -266,6 +283,11 @@ class _GeneratorPageState extends State<GeneratorPage> {
             icon: const Icon(Icons.apps),
             tooltip: 'My apps',
             onPressed: _openMyApps,
+          ),
+          IconButton(
+            icon: const Icon(Icons.key),
+            tooltip: 'Signing key',
+            onPressed: _openKeyPage,
           ),
           IconButton(
             icon: const Icon(Icons.info_outline),
@@ -325,7 +347,12 @@ class _GeneratorPageState extends State<GeneratorPage> {
                     ? const Icon(Icons.image_outlined)
                     : ClipRRect(
                         borderRadius: BorderRadius.circular(6),
-                        child: Image.memory(_icon!, width: 40, height: 40, fit: BoxFit.cover),
+                        child: Image.memory(
+                          _icon!,
+                          width: 40,
+                          height: 40,
+                          fit: BoxFit.cover,
+                        ),
                       ),
                 enabled: !busy,
                 onTap: _pickIcon,
@@ -400,7 +427,9 @@ class _PackageDialogState extends State<_PackageDialog> {
         autofocus: true,
         onChanged: (_) => setState(() {}),
         decoration: InputDecoration(
-          errorText: ok ? null : 'Use dot-separated segments like org.example.app',
+          errorText: ok
+              ? null
+              : 'Use dot-separated segments like org.example.app',
         ),
       ),
       actions: [
