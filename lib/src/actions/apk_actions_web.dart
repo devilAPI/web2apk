@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:js_interop';
 
 import 'package:flutter/services.dart';
@@ -45,7 +46,9 @@ class PlatformApkActions implements ApkActions {
     web.document.body!.append(anchor);
     anchor.click();
     anchor.remove();
-    web.URL.revokeObjectURL(url);
+    // Revoking right after click() can cancel the download in some browsers;
+    // the browser has picked up the blob well before this fires.
+    Timer(const Duration(seconds: 10), () => web.URL.revokeObjectURL(url));
     return true;
   }
 }
