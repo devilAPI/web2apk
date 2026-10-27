@@ -410,7 +410,7 @@ void main() {
     await pumpWith(tester, pickIcon: () async => (bytes: png, name: 'ok.png'));
     await pickIconAndWait(tester);
     expect(find.text('ok.png'), findsOneWidget);
-    expect(find.byType(Image), findsOneWidget);
+    expect(find.byType(Image), findsNWidgets(2)); // icon tile + preview
   });
 
   testWidgets('failing file picker shows an error instead of crashing', (

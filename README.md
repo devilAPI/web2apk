@@ -29,6 +29,7 @@ Fill in the form and tap **Generate**:
 - **Color** - title-bar color
 - **Icon** - an image from your gallery/files (center-cropped to a square); without one the app gets the web2apk globe icon
 - **Fullscreen** - hides only the title bar; the Android status bar stays visible
+- **Preview** - a live sketch of the app screen and home-screen icon (beside the form on wide screens)
 - **Package** - shown as "Package: ... - tap to change". It is derived from the domain (`https://example.org` -> `org.example.web2apk`). Every app needs its own ID: two apps with the same ID replace each other, so change it if you build several apps for one domain.
 
 When the APK is ready:

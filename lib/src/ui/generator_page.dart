@@ -11,6 +11,7 @@ import '../apk/signing_key.dart';
 import '../apk/template_contract.dart';
 import '../apk_actions.dart';
 import '../saved_apps.dart';
+import 'app_preview.dart';
 import 'key_page.dart';
 import 'my_apps_page.dart';
 import 'result_page.dart';
@@ -352,10 +353,17 @@ class _GeneratorPageState extends State<GeneratorPage> {
           ),
         ],
       ),
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 560),
-          child: ListView(
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final wide = constraints.maxWidth >= 760;
+          final preview = AppPreview(
+            name: _name.text,
+            url: _normalizedUrl,
+            color: _color,
+            fullscreen: _fullscreen,
+            icon: _icon,
+          );
+          final form = ListView(
             padding: const EdgeInsets.all(16),
             children: [
               if (widget.showWebKeyNotice) ...[
@@ -427,7 +435,13 @@ class _GeneratorPageState extends State<GeneratorPage> {
                 enabled: !busy,
                 onTap: _editPackage,
               ),
-              const SizedBox(height: 16),
+              if (!wide) ...[
+                const SizedBox(height: 8),
+                Text('Preview', style: Theme.of(context).textTheme.titleSmall),
+                const SizedBox(height: 12),
+                preview,
+              ],
+              const SizedBox(height: 24),
               FilledButton(
                 key: const Key('generate'),
                 onPressed: _valid && !busy ? _generate : null,
@@ -447,8 +461,32 @@ class _GeneratorPageState extends State<GeneratorPage> {
                     : const Text('Generate'),
               ),
             ],
-          ),
-        ),
+          );
+          if (!wide) {
+            return Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 560),
+                child: form,
+              ),
+            );
+          }
+          return Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Flexible(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 560),
+                  child: form,
+                ),
+              ),
+              const SizedBox(width: 8),
+              SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
+                child: preview,
+              ),
+            ],
+          );
+        },
       ),
     );
   }
