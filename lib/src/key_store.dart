@@ -1,15 +1,11 @@
 import 'dart:convert';
 
-import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'apk/signing_key.dart';
+import 'keygen/keygen.dart';
 
 const signingKeyPrefsKey = 'signing_key_v1';
-
-SigningKey _generateInIsolate(void _) => SigningKey.generate();
-
-Future<SigningKey> _defaultGenerate() => compute(_generateInIsolate, null);
 
 /// Returns the persisted signing key, creating and storing one on first use.
 ///
@@ -33,8 +29,11 @@ Future<SigningKey> loadOrCreateSigningKey(
       throw StateError('Stored signing key is unreadable');
     }
   }
-  final key = await (generate ?? _defaultGenerate)();
-  final ok = await prefs.setString(signingKeyPrefsKey, jsonEncode(key.toJson()));
+  final key = await (generate ?? generateSigningKey)();
+  final ok = await prefs.setString(
+    signingKeyPrefsKey,
+    jsonEncode(key.toJson()),
+  );
   if (!ok) throw StateError('Signing key could not be stored');
   return key;
 }

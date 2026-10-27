@@ -53,6 +53,61 @@ void main() {
     expect(signApkV2(zip, k2), signApkV2(zip, key));
   });
 
+  test(
+    'fromRsaParts rebuilds the key with a fresh valid certificate',
+    () async {
+      final k = key.privateKey;
+      final rebuilt = SigningKey.fromRsaParts(
+        n: k.modulus!,
+        d: k.privateExponent!,
+        p: k.p!,
+        q: k.q!,
+      );
+      expect(rebuilt.publicKey.modulus, key.publicKey.modulus);
+      expect(rebuilt.publicKey.exponent, BigInt.from(65537));
+      // Survives the strict JSON validation (cert matches key).
+      SigningKey.fromJson(rebuilt.toJson());
+      if (noApksigner != null) return;
+      final apk = await signToFile(rebuilt, 'rebuilt');
+      final r = await runTool('apksigner', [
+        'verify',
+        '--min-sdk-version',
+        '24',
+        apk,
+      ]);
+      expect(r.exitCode, 0, reason: '${r.stdout}\n${r.stderr}');
+    },
+  );
+
+  test('fromRsaParts accepts d reduced mod lcm(p-1,q-1) (WebCrypto style)', () {
+    final k = key.privateKey;
+    final p1 = k.p! - BigInt.one, q1 = k.q! - BigInt.one;
+    final lambda = p1 * q1 ~/ p1.gcd(q1);
+    final e = BigInt.from(65537);
+    // Both d and d+lambda invert e mod lambda; pick the one that differs from
+    // pointycastle's (p-1)(q-1) form so the normalisation is really exercised.
+    final dPhi = e.modInverse(p1 * q1);
+    var dLambda = e.modInverse(lambda);
+    if (dLambda == dPhi) dLambda += lambda;
+    final rebuilt = SigningKey.fromRsaParts(
+      n: k.modulus!,
+      d: dLambda,
+      p: k.p!,
+      q: k.q!,
+    );
+    expect(rebuilt.publicKey.exponent, e);
+    SigningKey.fromJson(rebuilt.toJson());
+    expect(
+      () => SigningKey.fromRsaParts(
+        n: k.modulus!,
+        d: dLambda + BigInt.two,
+        p: k.p!,
+        q: k.q!,
+      ),
+      throwsFormatException,
+    );
+  });
+
   test('fromJson rejects garbage', () {
     expect(() => SigningKey.fromJson({'n': 'zz'}), throwsFormatException);
     expect(() => SigningKey.fromJson({}), throwsFormatException);

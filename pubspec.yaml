@@ -43,6 +43,7 @@ dependencies:
   share_plus: ^13.3.1
   path_provider: ^2.1.6
   flutter_colorpicker: ^1.1.0
+  web: ^1.1.2
 
 dev_dependencies:
   flutter_test:
