@@ -56,6 +56,65 @@ void main() {
     expect(readZip(writeZip([e])).single.data, src);
   });
 
+  group('corrupt input throws FormatException', () {
+    Uint8List sample() => writeZip([
+      ZipEntry.stored('a.txt', Uint8List.fromList([1, 2, 3])),
+      ZipEntry.deflated('b.txt', Uint8List.fromList(List.filled(100, 9))),
+    ]);
+    // Offset of the EOCD record: the sample has no archive comment.
+    int eocdOf(Uint8List z) => z.length - 22;
+
+    test('every truncation', () {
+      final z = sample();
+      for (var len = 0; len < z.length; len++) {
+        expect(
+          () => readZip(Uint8List.sublistView(z, 0, len)),
+          throwsFormatException,
+          reason: 'length $len',
+        );
+      }
+    });
+
+    test('central directory offset past the EOCD', () {
+      final z = sample();
+      ByteData.sublistView(z)
+          .setUint32(eocdOf(z) + 16, z.length, Endian.little);
+      expect(() => readZip(z), throwsFormatException);
+    });
+
+    test('entry count larger than the central directory', () {
+      final z = sample();
+      ByteData.sublistView(z).setUint16(eocdOf(z) + 10, 500, Endian.little);
+      expect(() => readZip(z), throwsFormatException);
+    });
+
+    test('name length running past the central directory', () {
+      final z = sample();
+      final cd = ByteData.sublistView(z)
+          .getUint32(eocdOf(z) + 16, Endian.little);
+      ByteData.sublistView(z).setUint16(cd + 28, 0xFFFF, Endian.little);
+      expect(() => readZip(z), throwsFormatException);
+    });
+
+    test('any single garbled byte never escapes as another error', () {
+      final clean = sample();
+      final cd = ByteData.sublistView(clean)
+          .getUint32(eocdOf(clean) + 16, Endian.little);
+      for (var i = 0; i < clean.length; i++) {
+        for (final v in [0x00, 0xFF]) {
+          final z = Uint8List.fromList(clean)..[i] = v;
+          try {
+            readZip(z);
+          } on FormatException {
+            // expected for many positions
+          } catch (e) {
+            fail('byte $i (cd at $cd) = $v: ${e.runtimeType}: $e');
+          }
+        }
+      }
+    });
+  });
+
   test('zipalign accepts output', () async {
     final out = writeZip(readZip(loadTemplate()));
     final dir = Directory.systemTemp.createTempSync('zip_test');

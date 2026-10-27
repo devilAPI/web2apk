@@ -55,6 +55,7 @@ const _sigCentral = 0x02014b50;
 const _sigEocd = 0x06054b50;
 
 /// Reads a ZIP archive, driven by its central directory. Keeps entry order.
+/// Throws [FormatException] for truncated or corrupt input.
 List<ZipEntry> readZip(Uint8List bytes) {
   final bd = ByteData.sublistView(bytes);
   // Find the end-of-central-directory record (may be followed by a comment).
@@ -71,11 +72,14 @@ List<ZipEntry> readZip(Uint8List bytes) {
   }
   final count = bd.getUint16(eocd + 10, Endian.little);
   var pos = bd.getUint32(eocd + 16, Endian.little);
+  if (pos > eocd) {
+    throw const FormatException('ZIP central directory offset out of range');
+  }
 
   final entries = <ZipEntry>[];
   for (var n = 0; n < count; n++) {
-    if (pos + 46 > bytes.length ||
-        bd.getUint32(pos, Endian.little) != _sigCentral) {
+    // Every central directory entry must lie between its start and the EOCD.
+    if (pos + 46 > eocd || bd.getUint32(pos, Endian.little) != _sigCentral) {
       throw const FormatException('Bad ZIP central directory entry');
     }
     final method = bd.getUint16(pos + 10, Endian.little);
@@ -86,6 +90,9 @@ List<ZipEntry> readZip(Uint8List bytes) {
     final extraLen = bd.getUint16(pos + 30, Endian.little);
     final commentLen = bd.getUint16(pos + 32, Endian.little);
     final localOffset = bd.getUint32(pos + 42, Endian.little);
+    if (pos + 46 + nameLen + extraLen + commentLen > eocd) {
+      throw const FormatException('Bad ZIP central directory entry');
+    }
     final name = utf8.decode(
       bytes.sublist(pos + 46, pos + 46 + nameLen),
       allowMalformed: true,
