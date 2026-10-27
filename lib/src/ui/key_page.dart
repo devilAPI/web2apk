@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 
 import '../apk/signing_key.dart';
 import '../apk_actions.dart';
+import 'snack.dart';
 
 const keyBackupFileName = 'web2apk-signing-key.json';
 const keyBackupFormat = 'web2apk-signing-key-v1';
@@ -54,10 +55,7 @@ class _KeyPageState extends State<KeyPage> {
   }
 
   void _snack(String message) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(message)));
+    if (mounted) showSnack(context, message);
   }
 
   Future<bool> _confirm(String text, String action) async =>

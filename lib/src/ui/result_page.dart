@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 
 import '../apk_actions.dart';
+import 'snack.dart';
 
 class ResultPage extends StatelessWidget {
   const ResultPage({
@@ -16,17 +17,11 @@ class ResultPage extends StatelessWidget {
   final String fileName;
   final ApkActions actions;
 
-  void _snack(BuildContext context, String message) {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(message)));
-  }
-
   Future<void> _run(BuildContext context, Future<void> Function() body) async {
     try {
       await body();
     } catch (e) {
-      if (context.mounted) _snack(context, 'Failed: $e');
+      if (context.mounted) showSnack(context, 'Failed: $e');
     }
   }
 
@@ -61,7 +56,7 @@ class ResultPage extends StatelessWidget {
                       final r = await actions.install(apk, fileName);
                       if (r == InstallResult.needsPermission &&
                           context.mounted) {
-                        _snack(
+                        showSnack(
                           context,
                           'Allow installs from web2apk in the settings, then tap Install again.',
                         );
@@ -75,7 +70,7 @@ class ResultPage extends StatelessWidget {
                   label: const Text('Save'),
                   onPressed: () => _run(context, () async {
                     final ok = await actions.save(apk, fileName);
-                    if (ok && context.mounted) _snack(context, 'Saved');
+                    if (ok && context.mounted) showSnack(context, 'Saved');
                   }),
                 ),
                 if (actions.canShare) ...[

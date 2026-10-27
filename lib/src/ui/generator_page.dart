@@ -14,6 +14,7 @@ import '../saved_apps.dart';
 import 'key_page.dart';
 import 'my_apps_page.dart';
 import 'result_page.dart';
+import 'snack.dart';
 
 const _credit = 'Made by devilAPI with <3';
 const _repoUrl = 'https://github.com/devilAPI/web2apk';
@@ -240,10 +241,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
   }
 
   void _showError(String message) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(message)));
+    if (mounted) showSnack(context, message);
   }
 
   Future<void> _generate() async {
