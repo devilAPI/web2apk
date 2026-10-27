@@ -9,14 +9,16 @@ const _algRsaPkcs1Sha256 = 0x0103;
 const _v2BlockId = 0x7109871a;
 const _chunkSize = 1024 * 1024;
 const _eocdSig = 0x06054b50;
+const _magic = 'APK Sig Block 42';
 
 /// Signs [zip] (an unsigned ZIP, e.g. from `writeZip`) with APK Signature
 /// Scheme v2 and returns the signed APK: entries ‖ APK Signing Block ‖
 /// central directory ‖ EOCD (with its CD offset moved past the block).
 ///
 /// See https://source.android.com/docs/security/features/apksigning/v2.
-/// Throws [FormatException] if [zip] has no EOCD or already carries data
-/// between the entries and the central directory.
+/// Throws [FormatException] if [zip] has no EOCD or its central directory is
+/// not immediately followed by the EOCD, and [ArgumentError] if [zip] already
+/// carries an APK Signing Block.
 Uint8List signApkV2(Uint8List zip, SigningKey key) {
   final eocdOffset = _findEocd(zip);
   final bd = ByteData.sublistView(zip);
@@ -26,6 +28,10 @@ Uint8List signApkV2(Uint8List zip, SigningKey key) {
     throw const FormatException(
       'Central directory is not immediately followed by the EOCD',
     );
+  }
+
+  if (_endsWithMagic(zip, cdOffset)) {
+    throw ArgumentError('zip already carries an APK Signing Block');
   }
 
   final entries = Uint8List.sublistView(zip, 0, cdOffset);
@@ -57,7 +63,7 @@ Uint8List signApkV2(Uint8List zip, SigningKey key) {
     _u32(_v2BlockId),
     pairValue,
   ]);
-  final magic = Uint8List.fromList('APK Sig Block 42'.codeUnits);
+  final magic = Uint8List.fromList(_magic.codeUnits);
   final blockSize = pair.length + 8 + magic.length;
   final block = _concat([_u64(blockSize), pair, _u64(blockSize), magic]);
 
@@ -65,6 +71,15 @@ Uint8List signApkV2(Uint8List zip, SigningKey key) {
   ByteData.sublistView(newEocd)
       .setUint32(16, cdOffset + block.length, Endian.little);
   return _concat([entries, block, cd, newEocd]);
+}
+
+/// Whether the APK Signing Block magic ends right before [cdOffset].
+bool _endsWithMagic(Uint8List zip, int cdOffset) {
+  if (cdOffset < _magic.length) return false;
+  for (var i = 0; i < _magic.length; i++) {
+    if (zip[cdOffset - _magic.length + i] != _magic.codeUnitAt(i)) return false;
+  }
+  return true;
 }
 
 int _findEocd(Uint8List zip) {

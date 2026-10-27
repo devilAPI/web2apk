@@ -9,6 +9,7 @@ import 'package:web2apk/src/apk/signing_key.dart';
 import 'package:web2apk/src/apk/v2_signer.dart';
 import 'package:web2apk/src/apk/zip.dart';
 
+import '../fixtures/golden_key.dart';
 import '../support/sdk_tools.dart';
 
 void main() {
@@ -130,6 +131,26 @@ void main() {
       () => SigningKey.fromJson({...j, 'p': '1', 'q': j['n']}),
       throwsFormatException,
     );
+  });
+
+  test('fromJson rejects a certificate of another key', () {
+    final other = SigningKey.fromJson(goldenKeyJson);
+    expect(other.publicKey.modulus, isNot(key.publicKey.modulus));
+    expect(
+      () => SigningKey.fromJson({
+        ...key.toJson(),
+        'cert': other.toJson()['cert'],
+      }),
+      throwsFormatException,
+    );
+  });
+
+  test('signing an already signed APK throws ArgumentError', () {
+    final zip = writeZip([
+      ZipEntry.stored('a.txt', Uint8List.fromList([1, 2, 3])),
+    ]);
+    final signed = signApkV2(zip, key);
+    expect(() => signApkV2(signed, key), throwsArgumentError);
   });
 
   test('apksigner verifies v2 signature', () async {
