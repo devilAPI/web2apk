@@ -9,8 +9,9 @@ v1 is a Flutter project where the user edits three variables in `lib/main.dart`
 (`appName`, `url`, `appColor`) and builds the APK themselves with gradle. That
 requires a dev setup and is barebones.
 
-v2 turns this into an **Android app (built with Flutter) that generates the APK
-on the phone**. Audience: strangers / GitHub users who want their website as an
+v2 turns this into a **Flutter app ("generator") that builds the APK on the
+user's own device**. It runs on **Android, Linux, web, macOS and Windows**
+(user decision, 2026-10-27); the output is always an Android APK. Audience: strangers / GitHub users who want their website as an
 installable Android app without touching code or a build toolchain.
 
 The **generated app** behaves the same as v1's output — one WebView with
@@ -19,26 +20,29 @@ JavaScript enabled, under a colored title bar — with one addition: a
 
 ## Goals
 
-- Flutter Android app ("generator") with a form:
+- Flutter generator app with a form:
   - **App name** — home-screen label and title-bar text
   - **App icon** — picked from the gallery/files
   - **URL**
   - **Color** — title-bar color
   - **Fullscreen** toggle — when on, the generated app has no title bar.
     It hides **only the title bar**; the Android status bar stays visible.
-- Tapping **Generate** produces a signed, installable APK on-device.
-- After generation, three actions:
-  - **Install** — opens the Android package installer on the APK
-  - **Save** — writes the APK to Downloads
-  - **Share** — Android share sheet with the APK
+- Tapping **Generate** produces a signed, installable APK on the device the
+  generator runs on (phone, desktop or browser).
+- After generation, actions depending on platform:
+  - **Install** — Android only: opens the package installer on the APK
+  - **Save** — all platforms: save dialog (Android: system file picker, where
+    Downloads is one tap away; desktop: "Save as"; web: browser download)
+  - **Share** — where the platform can share files (Android in phase 1;
+    hidden where unsupported, e.g. Linux)
 - Multiple generated apps can be installed side by side.
 - Regenerating an app (same package ID) installs as an update over the old one.
 
 ## Non-goals
 
-- No compilation on the phone (no Flutter/gradle/aapt on device).
+- No compilation on the user's device (no Flutter/gradle/aapt at runtime).
 - The generated app is **not** a Flutter app.
-- No iOS, no desktop, no web target for the generator.
+- No iOS target for the generator.
 - No feature additions to the generated app beyond fullscreen (and the back
   button behavior below): no offline mode, no push, no file upload handling,
   no custom user agent, no splash screen config, etc.
@@ -55,7 +59,10 @@ JavaScript enabled, under a colored title bar — with one addition: a
 
 - Repository: v2 **replaces** the contents of `master` in this repo
   (`devilAPI/web2apk`). v1 is preserved on a `legacy` branch before removal.
-- Local toolchain available: Flutter 3.47.5 stable, Java on PATH.
+- Local toolchain available: Flutter 3.47.5 stable, JDK 21 and 27, Android SDK
+  at `/opt/android-sdk` (build-tools 36/37), no emulator.
+- **Phasing (user decision):** phase 1 = Android + Linux generator; phase 2 =
+  web, macOS, Windows. Each phase gets its own plan.
 - Generator minimum Android version: **7.0 (API 24)** — builder's call,
   approved list below.
 - Credit line "Made by devilAPI with <3 / https://github.com/devilAPI/web2apk"
@@ -94,10 +101,13 @@ JavaScript enabled, under a colored title bar — with one addition: a
    compatibility with API 24).
 6. Hand result to Install / Save / Share.
 
-Where steps 3–5 run (pure Dart vs. Kotlin in the generator's Android side via
-a platform channel, e.g. using Google's `apksig` library) is the builder's
-call. **Steps 3–5 are the main technical risk and must be proven with a
-spike before building the generator UI.**
+Because the generator must also run on web and desktop, **the whole pipeline
+is pure Dart** (no platform channels, no `dart:io` in the pipeline): own ZIP
+reader/writer with alignment, own binary-XML string patcher, APK Signature
+Scheme v2 signer on top of pure-Dart crypto. With minSdk 24, v2 alone is
+sufficient; v1 (JAR) signing is skipped. **Steps 3–5 are the main technical
+risk and are built and verified (with the SDK's `apksigner` and `aapt2`)
+before the generator UI.**
 
 ### Package ID
 
@@ -113,8 +123,13 @@ spike before building the generator UI.**
 
 ### Signing key
 
-- Generated on the generator's first run, stored in app-private storage, reused
-  for every generated APK, so regenerated apps update in place.
+- Generated on the generator's first run, stored in the platform's app
+  preferences (Android app-private storage, Linux/macOS/Windows per-user app
+  data, web browser storage), reused for every generated APK, so regenerated
+  apps update in place.
+- Web: the UI shows a warning that clearing site data loses the key. Key
+  export/import stays out for now (designer's call; user did not choose,
+  revisit in phase 2).
 - Not exportable in this version (known limitation: uninstalling the generator
   loses the key; future updates of previously generated apps then require
   uninstalling them first).
@@ -130,6 +145,8 @@ spike before building the generator UI.**
   apps' signing key.
 - Generator application ID: **`de.devilapi.web2apk`**.
 - The workflow also builds the template APK and bundles it into the generator.
+- Phase 1 release assets: Android APK, Linux x64 tarball. Phase 2 adds web
+  (GitHub Pages), Windows zip, macOS zip (unsigned; Gatekeeper warning).
 - The plan must include instructions for the owner to create the keystore and
   add the secrets.
 
@@ -149,14 +166,21 @@ spike before building the generator UI.**
 - Back button navigates web history before exiting.
 - Minimum Android 7.0 for the generator (and the generated apps).
 - Default color when none is picked: blue (v1's default).
+- Pure-Dart pipeline, v2-only signing (minSdk 24).
+- Save uses a save dialog on every platform instead of silently writing to
+  Downloads.
+- Generated app allows cleartext `http://` sites; non-http(s) links (mailto:,
+  tel:) open in the system app.
+- Title text white or black depending on bar color brightness; status bar is
+  a darker shade of the chosen color.
+- Template targets SDK 34 (avoids Android 15's forced edge-to-edge, which
+  would put the WebView under the title/status bar).
 
 ## Left to the builder
 
 - Generator UI layout and visual design (Material 3, single screen is fine).
 - Color picker widget, icon cropping/resizing approach.
 - Exact config file format inside the template.
-- Dart vs. platform-channel split for manifest patching and signing; library
-  choices.
 - How the template APK gets built and copied into generator assets (gradle
   task, script, CI).
 - README rewrite for v2.
