@@ -12,6 +12,33 @@ Map<String, Uint8List> renderLauncherIcons(
   Uint8List source,
   Iterable<String> iconPaths,
 ) {
+  final rgba = _centerSquare(source);
+
+  final out = <String, Uint8List>{};
+  for (final path in iconPaths) {
+    final m = kIconPath.firstMatch(path);
+    if (m == null) throw FormatException('Not an icon path: $path');
+    final px = kIconSizes[m.group(1)]!;
+    out[path] = _encodePng(_resize(rgba, px));
+  }
+  return out;
+}
+
+/// Center-crops [source] to a square and renders it as a [size]x[size] PNG
+/// (same pipeline as the launcher icons). Throws [FormatException] when
+/// [source] is not a supported image.
+Uint8List squarePng(Uint8List source, int size) =>
+    _encodePng(_resize(_centerSquare(source), size));
+
+img.Image _resize(img.Image square, int px) => img.copyResize(
+  square,
+  width: px,
+  height: px,
+  interpolation: img.Interpolation.cubic,
+);
+
+/// Decodes [source] and center-crops it to a square (cheap on huge sources).
+img.Image _centerSquare(Uint8List source) {
   img.Image? decoded;
   try {
     decoded = img.decodeImage(source);
@@ -28,24 +55,9 @@ Map<String, Uint8List> renderLauncherIcons(
     width: side,
     height: side,
   );
-  final rgba = square.numChannels == 4 || square.hasPalette
+  return square.numChannels == 4 || square.hasPalette
       ? square.convert(numChannels: 4)
       : square;
-
-  final out = <String, Uint8List>{};
-  for (final path in iconPaths) {
-    final m = kIconPath.firstMatch(path);
-    if (m == null) throw FormatException('Not an icon path: $path');
-    final px = kIconSizes[m.group(1)]!;
-    final resized = img.copyResize(
-      rgba,
-      width: px,
-      height: px,
-      interpolation: img.Interpolation.cubic,
-    );
-    out[path] = _encodePng(resized);
-  }
-  return out;
 }
 
 /// Encodes [image] as an 8-bit RGBA PNG.
