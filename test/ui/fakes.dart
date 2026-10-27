@@ -1,6 +1,14 @@
 import 'dart:typed_data';
 
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:web2apk/src/apk_actions.dart';
+import 'package:web2apk/src/saved_apps.dart';
+
+/// In-memory [SavedAppsStore], optionally seeded with raw prefs [values].
+Future<SavedAppsStore> memoryStore([Map<String, Object> values = const {}]) async {
+  SharedPreferences.setMockInitialValues(values);
+  return SavedAppsStore(await SharedPreferences.getInstance());
+}
 
 class FakeActions implements ApkActions {
   FakeActions({this.canInstall = true, this.canShare = true});

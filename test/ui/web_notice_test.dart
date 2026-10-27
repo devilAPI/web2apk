@@ -11,15 +11,17 @@ const _notice =
     'and apps you generated can then no longer be updated in place.';
 
 void main() {
-  Future<void> pumpPage(WidgetTester tester, {bool? showWebKeyNotice}) {
+  Future<void> pumpPage(WidgetTester tester, {bool? showWebKeyNotice}) async {
+    final store = await memoryStore();
     Future<SigningKey> noKey() async => throw UnimplementedError();
-    return tester.pumpWidget(
+    await tester.pumpWidget(
       MaterialApp(
         home: showWebKeyNotice == null
-            ? GeneratorPage(actions: FakeActions(), loadKey: noKey)
+            ? GeneratorPage(actions: FakeActions(), loadKey: noKey, savedApps: store)
             : GeneratorPage(
                 actions: FakeActions(),
                 loadKey: noKey,
+                savedApps: store,
                 showWebKeyNotice: showWebKeyNotice,
               ),
       ),

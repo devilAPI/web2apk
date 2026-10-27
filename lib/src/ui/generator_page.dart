@@ -9,6 +9,8 @@ import '../apk/app_spec.dart';
 import '../apk/icons.dart';
 import '../apk/signing_key.dart';
 import '../apk_actions.dart';
+import '../saved_apps.dart';
+import 'my_apps_page.dart';
 import 'result_page.dart';
 
 const _credit = 'Made by devilAPI with <3';
@@ -41,12 +43,18 @@ class GeneratorPage extends StatefulWidget {
     super.key,
     required this.actions,
     required this.loadKey,
+    required this.savedApps,
+    this.initial,
     this.loadTemplate,
     this.showWebKeyNotice = kIsWeb,
   });
 
   final ApkActions actions;
   final Future<SigningKey> Function() loadKey;
+  final SavedAppsStore savedApps;
+
+  /// A remembered app to prefill the form with.
+  final SavedApp? initial;
   final Future<Uint8List> Function()? loadTemplate;
 
   /// Whether to warn that the signing key lives in browser storage.
@@ -66,6 +74,39 @@ class _GeneratorPageState extends State<GeneratorPage> {
   String? _iconError;
   String? _manualPackage;
   String? _progress;
+
+  @override
+  void initState() {
+    super.initState();
+    final initial = widget.initial;
+    if (initial != null) _fill(initial);
+  }
+
+  /// Fills the form from [app]; its package id is kept even if the URL changes.
+  void _fill(SavedApp app) {
+    _name.text = app.name;
+    _url.text = app.url;
+    _color = Color(app.color);
+    _fullscreen = app.fullscreen;
+    _icon = app.icon;
+    _iconName = app.icon == null ? null : 'Saved icon';
+    _iconError = null;
+    _manualPackage = app.packageId;
+  }
+
+  Future<void> _openMyApps() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (ctx) => MyAppsPage(
+          store: widget.savedApps,
+          onOpen: (app) {
+            Navigator.of(ctx).pop();
+            setState(() => _fill(app));
+          },
+        ),
+      ),
+    );
+  }
 
   @override
   void dispose() {
@@ -182,6 +223,12 @@ class _GeneratorPageState extends State<GeneratorPage> {
               .asUint8List())();
       if (mounted) setState(() => _progress = 'Building APK…');
       final apk = await compute(_buildInIsolate, _BuildJob(template, spec, key));
+      try {
+        await widget.savedApps.upsert(SavedApp.fromSpec(spec));
+      } catch (e) {
+        // The APK is built; a failed save must not keep it from the user.
+        _showError('The app could not be saved to My apps: $e');
+      }
       if (!mounted) return;
       await Navigator.of(context).push(
         MaterialPageRoute<void>(
@@ -215,6 +262,11 @@ class _GeneratorPageState extends State<GeneratorPage> {
       appBar: AppBar(
         title: const Text('web2apk'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.apps),
+            tooltip: 'My apps',
+            onPressed: _openMyApps,
+          ),
           IconButton(
             icon: const Icon(Icons.info_outline),
             tooltip: 'About',

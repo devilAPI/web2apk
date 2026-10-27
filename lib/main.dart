@@ -6,12 +6,19 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'src/apk_actions.dart';
 import 'src/key_store.dart';
+import 'src/saved_apps.dart';
 import 'src/ui/generator_page.dart';
 
-void main() => runApp(const Web2ApkApp());
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  final prefs = await SharedPreferences.getInstance();
+  runApp(Web2ApkApp(prefs: prefs));
+}
 
 class Web2ApkApp extends StatelessWidget {
-  const Web2ApkApp({super.key});
+  const Web2ApkApp({super.key, required this.prefs});
+
+  final SharedPreferences prefs;
 
   @override
   Widget build(BuildContext context) {
@@ -23,8 +30,8 @@ class Web2ApkApp extends StatelessWidget {
       ),
       home: GeneratorPage(
         actions: PlatformApkActions(),
-        loadKey: () async =>
-            loadOrCreateSigningKey(await SharedPreferences.getInstance()),
+        savedApps: SavedAppsStore(prefs),
+        loadKey: () async => loadOrCreateSigningKey(prefs),
       ),
     );
   }
