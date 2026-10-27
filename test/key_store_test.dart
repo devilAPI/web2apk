@@ -5,14 +5,18 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:web2apk/src/apk/signing_key.dart';
 import 'package:web2apk/src/key_store.dart';
 
+import 'fixtures/golden_key.dart';
+
 void main() {
   late SigningKey fixed;
-  setUpAll(() => fixed = SigningKey.generate());
+  // Fixture key: generating 2048-bit RSA in pure Dart is far too slow in
+  // dart2js tests.
+  setUpAll(() => fixed = SigningKey.fromJson(goldenKeyJson));
 
   Future<SigningKey> Function() counting(List<int> calls) => () async {
-        calls.add(1);
-        return fixed;
-      };
+    calls.add(1);
+    return fixed;
+  };
 
   test('creates and stores when empty', () async {
     SharedPreferences.setMockInitialValues({});
@@ -29,7 +33,10 @@ void main() {
     final prefs = await SharedPreferences.getInstance();
     final calls = <int>[];
     await loadOrCreateSigningKey(prefs, generate: counting(calls));
-    final again = await loadOrCreateSigningKey(prefs, generate: counting(calls));
+    final again = await loadOrCreateSigningKey(
+      prefs,
+      generate: counting(calls),
+    );
     expect(calls.length, 1);
     expect(again.publicKey.modulus, fixed.publicKey.modulus);
   });
@@ -41,8 +48,13 @@ void main() {
       final calls = <int>[];
       await expectLater(
         loadOrCreateSigningKey(prefs, generate: counting(calls)),
-        throwsA(isA<StateError>().having(
-            (e) => e.message, 'message', 'Stored signing key is unreadable')),
+        throwsA(
+          isA<StateError>().having(
+            (e) => e.message,
+            'message',
+            'Stored signing key is unreadable',
+          ),
+        ),
       );
       expect(calls, isEmpty);
       expect(prefs.getString('signing_key_v1'), bad);

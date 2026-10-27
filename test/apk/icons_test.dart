@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:crypto/crypto.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
 import 'package:web2apk/src/apk/icons.dart';
@@ -49,6 +50,19 @@ void main() {
           'Not a supported image',
         ),
       ),
+    );
+  });
+
+  test('icon PNG bytes are platform independent (VM and web)', () {
+    // 8x8 black PNG as a constant, so the input does not depend on the
+    // platform's PNG encoder.
+    final src = base64.decode(
+      'iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAIAAABLbSncAAAAD0lEQVR4nGNhwAFYhpYEAA7YACES0d1fAAAAAElFTkSuQmCC',
+    );
+    final out = renderLauncherIcons(src, [paths.first]);
+    expect(
+      sha256.convert(out[paths.first]!).toString(),
+      'a6fa1310f428e2ac2ce34c933ec16a61ef5d8a650949cc4422c9d7f2e4b2b5d9',
     );
   });
 }
