@@ -58,7 +58,7 @@ The generator creates a signing key on first use and stores it per install (shar
 
 ## Building from source
 
-Requirements: Flutter 3.47.5, JDK 17+ and the Android SDK (`ANDROID_HOME` set).
+Requirements: Flutter 3.47.5, JDK 17-21 (newer JDKs are too new for the Android Gradle plugin) and the Android SDK (`ANDROID_HOME` set).
 
 ```bash
 scripts/build_template.sh   # builds the template APK into assets/template.apk (gitignored)
