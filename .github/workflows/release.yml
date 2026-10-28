@@ -99,6 +99,11 @@ jobs:
           PREV: ${{ steps.check.outputs.prev }}
         run: |
           build="${DEV_TAG#dev-}"
+          # carry over the dev build's debug-key warning, if any
+          signing="$(gh release view "$DEV_TAG" --json body -q .body | grep -m1 'signed with a DEBUG key' || true)"
+          [ -n "$signing" ] && signing="
+          **Warning:** ${signing}
+          "
           if [ -n "$PREV" ]; then
             changes="$(git log --no-merges --pretty='- %s (%h)' "$PREV..$SHA")"
             heading="Changes since $PREV:"
@@ -114,7 +119,7 @@ jobs:
           - macOS: web2apk-${TAG}-macos.zip (unsigned: right-click -> Open the first time)
           - Linux: web2apk-${TAG}-linux-x64.tar.gz
           - iOS: web2apk-${TAG}-ios-unsigned.ipa (sideload it with AltStore, Sideloadly, ...)
-
+          ${signing}
           ${heading}
           ${changes}"
           gh release create "$TAG" dist/* \
