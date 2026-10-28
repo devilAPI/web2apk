@@ -31,9 +31,47 @@
 
   <title>web2apk</title>
   <link rel="manifest" href="manifest.json">
-  <style>html, body { background: #121212; }</style>
+  <style>
+    html, body { background: #121212; margin: 0; height: 100%; }
+    #splash {
+      position: fixed; inset: 0; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 24px;
+      font-family: system-ui, sans-serif; color: #e3e3e3;
+      transition: opacity .3s ease; z-index: 9999; background: #121212;
+    }
+    #splash.done { opacity: 0; pointer-events: none; }
+    #splash img { width: 96px; height: 96px; border-radius: 22px; }
+    #splash .bar {
+      width: 160px; height: 4px; border-radius: 2px; overflow: hidden;
+      background: #2a2f36;
+    }
+    #splash .bar::after {
+      content: ""; display: block; width: 40%; height: 100%;
+      border-radius: 2px; background: #2196F3;
+      animation: slide 1.2s ease-in-out infinite;
+    }
+    @keyframes slide {
+      from { transform: translateX(-100%); }
+      to { transform: translateX(250%); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      #splash .bar::after { animation: none; width: 100%; opacity: .6; }
+    }
+  </style>
 </head>
 <body>
+  <div id="splash" role="status" aria-label="Loading web2apk">
+    <img src="icons/Icon-192.png" alt="">
+    <div class="bar"></div>
+  </div>
+  <script>
+    // Fade the splash out once Flutter has drawn its first frame.
+    window.addEventListener('flutter-first-frame', function () {
+      const splash = document.getElementById('splash');
+      splash.classList.add('done');
+      setTimeout(function () { splash.remove(); }, 300);
+    }, { once: true });
+  </script>
   <!--
     You can customize the "flutter_bootstrap.js" script.
     This is useful to provide a custom configuration to the Flutter loader
