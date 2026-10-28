@@ -205,30 +205,11 @@ class _GeneratorPageState extends State<GeneratorPage> {
       isValidPackageId(_packageId!);
 
   Future<void> _pickColor() async {
-    var picked = _color;
-    final ok = await showDialog<bool>(
+    final picked = await showDialog<Color>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Color'),
-        content: SingleChildScrollView(
-          child: BlockPicker(
-            pickerColor: _color,
-            onColorChanged: (c) => picked = c,
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('OK'),
-          ),
-        ],
-      ),
+      builder: (_) => _ColorDialog(initial: _color),
     );
-    if (ok == true) setState(() => _color = picked);
+    if (picked != null) setState(() => _color = picked);
   }
 
   Future<void> _pickIcon() async {
@@ -435,12 +416,6 @@ class _GeneratorPageState extends State<GeneratorPage> {
                 enabled: !busy,
                 onTap: _editPackage,
               ),
-              if (!wide) ...[
-                const SizedBox(height: 8),
-                Text('Preview', style: Theme.of(context).textTheme.titleSmall),
-                const SizedBox(height: 12),
-                preview,
-              ],
               const SizedBox(height: 24),
               FilledButton(
                 key: const Key('generate'),
@@ -460,6 +435,12 @@ class _GeneratorPageState extends State<GeneratorPage> {
                       )
                     : const Text('Generate'),
               ),
+              if (!wide) ...[
+                const SizedBox(height: 24),
+                Text('Preview', style: Theme.of(context).textTheme.titleSmall),
+                const SizedBox(height: 12),
+                preview,
+              ],
             ],
           );
           if (!wide) {
@@ -488,6 +469,57 @@ class _GeneratorPageState extends State<GeneratorPage> {
           );
         },
       ),
+    );
+  }
+}
+
+/// Preset swatches, with a toggle to a free HSV picker and hex input.
+class _ColorDialog extends StatefulWidget {
+  const _ColorDialog({required this.initial});
+  final Color initial;
+
+  @override
+  State<_ColorDialog> createState() => _ColorDialogState();
+}
+
+class _ColorDialogState extends State<_ColorDialog> {
+  late Color _picked = widget.initial;
+  bool _custom = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Color'),
+      content: SingleChildScrollView(
+        child: _custom
+            ? ColorPicker(
+                pickerColor: _picked,
+                onColorChanged: (c) => _picked = c,
+                enableAlpha: false,
+                hexInputBar: true,
+                labelTypes: const [],
+                pickerAreaHeightPercent: 0.7,
+              )
+            : BlockPicker(
+                pickerColor: _picked,
+                onColorChanged: (c) => setState(() => _picked = c),
+              ),
+      ),
+      actions: [
+        TextButton(
+          key: const Key('custom-color'),
+          onPressed: () => setState(() => _custom = !_custom),
+          child: Text(_custom ? 'Presets' : 'Custom'),
+        ),
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        TextButton(
+          onPressed: () => Navigator.pop(context, _picked.withAlpha(0xFF)),
+          child: const Text('OK'),
+        ),
+      ],
     );
   }
 }
