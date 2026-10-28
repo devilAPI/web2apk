@@ -129,6 +129,12 @@
     #splash img { width: 96px; height: 96px; border-radius: 22px; }
     #splash p { max-width: 360px; margin: 0 16px; text-align: center; line-height: 1.5; }
     #splash a { color: #64b5f6; }
+    #splash h1 { margin: 0 16px; font-size: 22px; font-weight: 600; text-align: center; }
+    #splash .hint { font-size: 14px; color: #a8adb4; }
+    #splash a.download {
+      display: inline-block; padding: 12px 24px; border-radius: 24px;
+      background: #2196F3; color: #fff; font-weight: 600; text-decoration: none;
+    }
     #splash .bar {
       width: 160px; height: 4px; border-radius: 2px; overflow: hidden;
       background: #2a2f36;
@@ -159,12 +165,16 @@
     if (typeof WebAssembly !== 'object') {
       const splash = document.getElementById('splash');
       splash.querySelector('.bar').remove();
-      const msg = document.createElement('p');
-      msg.innerHTML = 'web2apk needs WebAssembly, which this browser has turned '
-        + 'off. Allow JavaScript JIT / WebAssembly for this site in the '
-        + 'browser settings and reload, or get the app from the '
-        + '<a href="https://github.com/devilAPI/web2apk/releases">Releases</a> page.';
-      splash.appendChild(msg);
+      splash.insertAdjacentHTML('beforeend',
+        '<h1>This browser is not supported</h1>'
+        + '<p>The web version of web2apk needs WebAssembly, which this browser '
+        + 'has turned off. Get the web2apk app for your device instead: it '
+        + 'works the same and keeps your signing key safely.</p>'
+        + '<a class="download" href="https://github.com/devilAPI/web2apk/releases/latest">'
+        + 'Download web2apk</a>'
+        + '<p class="hint">Android, Windows, macOS, Linux and iOS builds. Or allow '
+        + 'JavaScript JIT / WebAssembly for this site in the browser settings '
+        + 'and reload.</p>');
       splash.setAttribute('aria-label', 'web2apk cannot run in this browser');
     }
   </script>
