@@ -2,7 +2,7 @@ name: web2apk
 description: "Turn a website into an Android app (APK), right on your device."
 publish_to: 'none'
 
-version: 1.0.0+1
+version: 2.0.0+1
 
 environment:
   sdk: ^3.13.4

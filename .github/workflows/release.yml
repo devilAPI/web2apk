@@ -1,0 +1,135 @@
+name: Release
+
+# Promotes a tested dev build to a full release: copies the files of a
+# dev-<n> prerelease (default: the newest one) into a new release v<version>,
+# renamed web2apk-v<version>-*, with fresh checksums, then republishes the web
+# app at the site root. Nothing is rebuilt, so the release ships exactly the
+# binaries that passed CI, with the same Android versionCode (the dev build
+# number). Start it by hand: Actions -> Release -> Run workflow.
+#
+# Release the newest dev build: github.token cannot tag an older commit whose
+# workflow files differ from master's (HTTP 403).
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version, like 1.2.0 (tagged v1.2.0)
+        required: true
+        type: string
+      dev_tag:
+        description: Dev build to release, like dev-12 (empty = newest)
+        required: false
+        type: string
+        default: ""
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    name: Release v${{ inputs.version }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      VERSION: ${{ inputs.version }}
+      DEV_TAG: ${{ inputs.dev_tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Check inputs
+        id: check
+        run: |
+          if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::version must look like 1.2.0, got '$VERSION'"
+            exit 1
+          fi
+          tag="v$VERSION"
+          if gh release view "$tag" >/dev/null 2>&1 || git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
+            echo "::error::$tag already exists"
+            exit 1
+          fi
+          gh api --paginate --slurp "repos/${GH_REPO}/releases?per_page=100" | jq 'add' > releases.json
+          if [ -z "$DEV_TAG" ]; then
+            DEV_TAG="$(jq -r 'map(select(.prerelease and (.draft | not) and (.tag_name | startswith("dev-"))))
+              | sort_by(.published_at) | last | .tag_name // empty' releases.json)"
+          fi
+          if ! [[ "$DEV_TAG" =~ ^dev-[0-9]+$ ]] || ! gh release view "$DEV_TAG" >/dev/null 2>&1; then
+            echo "::error::No dev build '$DEV_TAG' to release"
+            exit 1
+          fi
+          # the previous full release, for the changelog
+          prev="$(jq -r 'map(select((.prerelease | not) and (.draft | not) and (.tag_name | startswith("v"))))
+            | sort_by(.published_at) | last | .tag_name // empty' releases.json)"
+          sha="$(git rev-list -n1 "refs/tags/$DEV_TAG")"
+          echo "Releasing $DEV_TAG ($sha) as $tag; previous release: ${prev:-none}"
+          {
+            echo "tag=$tag"
+            echo "dev_tag=$DEV_TAG"
+            echo "sha=$sha"
+            echo "prev=$prev"
+          } >> "$GITHUB_OUTPUT"
+      - name: Download and rename the dev build
+        env:
+          DEV_TAG: ${{ steps.check.outputs.dev_tag }}
+          TAG: ${{ steps.check.outputs.tag }}
+        run: |
+          gh release download "$DEV_TAG" --dir dl
+          (cd dl && sha256sum -c SHA256SUMS.txt)
+          mkdir dist
+          for f in dl/web2apk-"$DEV_TAG"-*; do
+            name="$(basename "$f")"
+            cp "$f" "dist/web2apk-${TAG}-${name#web2apk-"$DEV_TAG"-}"
+          done
+          (cd dist && sha256sum * > SHA256SUMS.txt)
+          ls -l dist
+      - name: Publish release
+        env:
+          DEV_TAG: ${{ steps.check.outputs.dev_tag }}
+          TAG: ${{ steps.check.outputs.tag }}
+          SHA: ${{ steps.check.outputs.sha }}
+          PREV: ${{ steps.check.outputs.prev }}
+        run: |
+          build="${DEV_TAG#dev-}"
+          if [ -n "$PREV" ]; then
+            changes="$(git log --no-merges --pretty='- %s (%h)' "$PREV..$SHA")"
+            heading="Changes since $PREV:"
+          else
+            changes="$(git log --no-merges --pretty='- %s (%h)' -n 30 "$SHA")"
+            heading="Recent changes:"
+          fi
+          notes="web2apk ${VERSION} (build ${build}, from ${DEV_TAG}).
+
+          Use it in the browser at https://devilapi.github.io/web2apk/ or download it for your device below.
+          - Android: web2apk-${TAG}-android.apk
+          - Windows: web2apk-${TAG}-windows-x64.zip
+          - macOS: web2apk-${TAG}-macos.zip (unsigned: right-click -> Open the first time)
+          - Linux: web2apk-${TAG}-linux-x64.tar.gz
+          - iOS: web2apk-${TAG}-ios-unsigned.ipa (sideload it with AltStore, Sideloadly, ...)
+
+          ${heading}
+          ${changes}"
+          gh release create "$TAG" dist/* \
+            --target "$SHA" \
+            --latest \
+            --title "web2apk ${VERSION}" \
+            --notes "$notes"
+
+  # Releases made with github.token do not trigger other workflows, so the
+  # site is republished from here.
+  deploy-web:
+    name: Deploy web to /
+    needs: release
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    uses: ./.github/workflows/pages.yml

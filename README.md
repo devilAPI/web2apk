@@ -77,7 +77,7 @@ Every push to `master` runs `.github/workflows/dev-release.yml`: it tests, build
 
 Android version codes come from the workflow run number. Do not rename or recreate `dev-release.yml`: the counter would restart and new builds would count as downgrades.
 
-To make a full release, open a `dev-N` prerelease on GitHub and uncheck "pre-release". This republishes the web app at https://devilapi.github.io/web2apk/ (`.github/workflows/pages.yml`). One-time setup: Settings -> Pages -> Source: **GitHub Actions**.
+To make a full release, run **Actions -> Release -> Run workflow** (`.github/workflows/release.yml`) with a version like `2.1.0`. It copies the files of the newest `dev-N` build (or the one you name) into a release `v2.1.0`, so it ships exactly the binaries CI tested, and republishes the web app at https://devilapi.github.io/web2apk/. Bump `version:` in `pubspec.yaml` first so the apps report the same version. Release the newest dev build: `github.token` cannot tag an older commit whose workflow files differ from master's. One-time setup: Settings -> Pages -> Source: **GitHub Actions**.
 
 The Android APK is signed with your own key, supplied through repository secrets. Without them CI signs with a debug key (the release notes say so), and users must uninstall debug-signed builds before installing release-signed ones. Create a keystore with JDK 17-21:
 
