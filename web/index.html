@@ -119,9 +119,11 @@
       transition: opacity .3s ease; z-index: 9999; background: #121212;
     }
     /* Crawlable description of the page; the Flutter view covers it. It must
-       not take touches: mobile Chrome then hands swipes to this text instead
-       of Flutter, and the app cannot be scrolled. */
+       neither take touches nor overflow the (fixed, non-scrolling) body:
+       either way mobile Chrome hands swipes to the page instead of Flutter,
+       and the app cannot be scrolled. */
     #about { pointer-events: none; user-select: none;
+      position: fixed; inset: 0; overflow: hidden; box-sizing: border-box;
       max-width: 640px; margin: 0 auto; padding: 24px 16px;
       font-family: system-ui, sans-serif; color: #e3e3e3; line-height: 1.5; }
     #about a { color: #64b5f6; }
