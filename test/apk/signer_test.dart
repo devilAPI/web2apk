@@ -5,6 +5,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:pointycastle/asn1.dart';
 import 'package:web2apk/src/apk/signing_key.dart';
 import 'package:web2apk/src/apk/v2_signer.dart';
 import 'package:web2apk/src/apk/zip.dart';
@@ -143,6 +144,35 @@ void main() {
       }),
       throwsFormatException,
     );
+  });
+
+  test('signApkV2With gives the same APK as signApkV2', () async {
+    final zip = writeZip(readZip(loadTemplate()));
+    expect(
+      await signApkV2With(
+        zip,
+        key,
+        (m) async => rsaSha256Sign(key.privateKey, m),
+      ),
+      signApkV2(zip, key),
+    );
+  });
+
+  test('pkcs8Der carries the key with its CRT values', () {
+    final info = ASN1Parser(key.pkcs8Der).nextObject() as ASN1Sequence;
+    final octets = info.elements![2] as ASN1OctetString;
+    final rsa =
+        ASN1Parser(Uint8List.fromList(octets.octets!)).nextObject()
+            as ASN1Sequence;
+    BigInt at(int i) => (rsa.elements![i] as ASN1Integer).integer!;
+    final k = key.privateKey;
+    final p = k.p!, q = k.q!, d = k.privateExponent!;
+    expect(at(1), k.modulus);
+    expect(at(2), BigInt.from(65537));
+    expect([at(3), at(4), at(5)], [d, p, q]);
+    expect(at(6), d % (p - BigInt.one));
+    expect(at(7), d % (q - BigInt.one));
+    expect(at(8) * q % p, BigInt.one);
   });
 
   test('signing an already signed APK throws ArgumentError', () {

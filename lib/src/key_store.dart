@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'apk/signing_key.dart';
-import 'keygen/keygen.dart';
+import 'crypto/crypto.dart';
 
 const signingKeyPrefsKey = 'signing_key_v1';
 

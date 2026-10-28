@@ -67,8 +67,16 @@ img.Image _centerSquare(Uint8List source) {
 /// the pure-Dart [Deflate] everywhere so the generated APK is byte-identical.
 Uint8List _encodePng(img.Image image) {
   final rgba = image.convert(numChannels: 4, format: img.Format.uint8);
-  final w = rgba.width, h = rgba.height;
-  final pixels = rgba.getBytes(order: img.ChannelOrder.rgba);
+  return encodeRgbaPng(
+    rgba.getBytes(order: img.ChannelOrder.rgba),
+    rgba.width,
+    rgba.height,
+  );
+}
+
+/// Encodes [w]x[h] straight (non-premultiplied) RGBA [pixels] as a PNG, with
+/// the same deterministic writer as the launcher icons.
+Uint8List encodeRgbaPng(Uint8List pixels, int w, int h) {
   final raw = Uint8List(h * (1 + w * 4)); // filter type 0 (None) per row
   for (var y = 0; y < h; y++) {
     raw.setRange(y * (1 + w * 4) + 1, (y + 1) * (1 + w * 4), pixels, y * w * 4);

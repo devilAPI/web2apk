@@ -2,17 +2,16 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../apk/apk_builder.dart';
 import '../apk/app_spec.dart';
-import '../apk/icons.dart';
 import '../apk/signing_key.dart';
-import '../apk/template_contract.dart';
 import '../apk_actions.dart';
+import '../apk_build.dart';
+import '../icon_loader.dart';
 import '../saved_apps.dart';
 import 'app_preview.dart';
+import 'dialogs.dart';
 import 'key_page.dart';
 import 'my_apps_page.dart';
 import 'result_page.dart';
@@ -25,38 +24,13 @@ const _webKeyNotice =
     'apps you generated can still be installed, but no longer updated in '
     'place. For a key that lasts, install a web2apk build from the Releases '
     'page, or back the key up via Signing key.';
-const _ownPackageId = 'de.devilapi.web2apk';
 const _defaultColor = Color(0xFF2196F3);
-
-/// Everything the build isolate needs, sent through [compute] as one message.
-class _BuildJob {
-  const _BuildJob(this.template, this.spec, this.key);
-  final Uint8List template;
-  final AppSpec spec;
-  final SigningKey key;
-}
-
-/// The built APK plus the 192 px icon to remember (null: no custom icon).
-typedef _BuildResult = ({Uint8List apk, Uint8List? savedIcon});
-
-_BuildResult _buildInIsolate(_BuildJob job) {
-  final apk = buildApk(template: job.template, spec: job.spec, key: job.key);
-  final icon = job.spec.icon;
-  return (apk: apk, savedIcon: icon == null ? null : SavedApp.storedIcon(icon));
-}
-
-/// Decodes [bytes] as an icon; returns the error message, or null if usable.
-String? _iconProblem(Uint8List bytes) {
-  try {
-    squarePng(bytes, kIconSizes['mdpi']!);
-    return null;
-  } on FormatException catch (e) {
-    return e.message;
-  }
-}
 
 /// An image file picked by the user.
 typedef PickedImage = ({Uint8List bytes, String name});
+
+Future<Uint8List> _loadTemplate() async =>
+    (await rootBundle.load('assets/template.apk')).buffer.asUint8List();
 
 Future<PickedImage?> _pickImageFile() async {
   final file = await FilePicker.pickFile(type: FileType.image);
@@ -78,7 +52,7 @@ class GeneratorPage extends StatefulWidget {
     required this.replaceKey,
     required this.savedApps,
     this.initial,
-    this.loadTemplate,
+    this.loadTemplate = _loadTemplate,
     this.pickIcon = _pickImageFile,
     this.showWebKeyNotice = kIsWeb,
   });
@@ -90,7 +64,7 @@ class GeneratorPage extends StatefulWidget {
 
   /// A remembered app to prefill the form with.
   final SavedApp? initial;
-  final Future<Uint8List> Function()? loadTemplate;
+  final Future<Uint8List> Function() loadTemplate;
 
   /// Lets the user choose an icon image; null if cancelled.
   final Future<PickedImage?> Function() pickIcon;
@@ -107,6 +81,8 @@ class _GeneratorPageState extends State<GeneratorPage> {
   final _url = TextEditingController();
   Color _color = _defaultColor;
   bool _fullscreen = false;
+
+  /// The icon source: a square PNG from [loadIcon], or null for the default.
   Uint8List? _icon;
   String? _iconName;
   String? _iconError;
@@ -208,38 +184,33 @@ class _GeneratorPageState extends State<GeneratorPage> {
   Future<void> _pickColor() async {
     final picked = await showDialog<Color>(
       context: context,
-      builder: (_) => _ColorDialog(initial: _color),
+      builder: (_) => ColorDialog(initial: _color),
     );
     if (picked != null) setState(() => _color = picked);
   }
 
   Future<void> _pickIcon() async {
-    final PickedImage image;
-    final String? problem;
     try {
       final picked = await widget.pickIcon();
       if (picked == null) return;
-      image = picked;
-      // Decoding a large image takes a while: keep it off the UI isolate.
-      problem = await compute(_iconProblem, image.bytes);
+      final icon = await loadIcon(picked.bytes);
+      if (!mounted) return;
+      setState(() {
+        _icon = icon;
+        _iconName = picked.name;
+        _iconError = null;
+      });
+    } on FormatException catch (e) {
+      if (mounted) setState(() => _iconError = e.message);
     } catch (e) {
       if (mounted) setState(() => _iconError = 'Could not open the image: $e');
-      return;
     }
-    if (!mounted) return;
-    setState(() {
-      _iconError = problem;
-      if (problem == null) {
-        _icon = image.bytes;
-        _iconName = image.name;
-      }
-    });
   }
 
   Future<void> _editPackage() async {
     final result = await showDialog<String>(
       context: context,
-      builder: (_) => _PackageDialog(initial: _packageId ?? ''),
+      builder: (_) => PackageDialog(initial: _packageId ?? ''),
     );
     if (result != null) setState(() => _manualPackage = result);
   }
@@ -261,21 +232,16 @@ class _GeneratorPageState extends State<GeneratorPage> {
     try {
       setState(() => _progress = 'Preparing…');
       final key = await widget.loadKey();
-      final template =
-          await (widget.loadTemplate ??
-              () async =>
-                  (await rootBundle.load('assets/template.apk')).buffer
-                      .asUint8List())();
+      final template = await widget.loadTemplate();
       if (mounted) setState(() => _progress = 'Building APK…');
-      final built = await compute(
-        _buildInIsolate,
-        _BuildJob(template, spec, key),
+      final apk = await buildSignedApk(
+        template: template,
+        spec: spec,
+        key: key,
       );
-      final apk = built.apk;
       try {
-        await widget.savedApps.upsert(
-          SavedApp.fromSpec(spec, icon192: built.savedIcon),
-        );
+        // _icon is already the 192 px square the saved app keeps.
+        await widget.savedApps.upsert(SavedApp.fromSpec(spec, icon192: _icon));
       } catch (e) {
         // The APK is built; a failed save must not keep it from the user.
         _showError('The app could not be saved to My apps: $e');
@@ -491,108 +457,6 @@ class _GeneratorPageState extends State<GeneratorPage> {
           );
         },
       ),
-    );
-  }
-}
-
-/// Preset swatches, with a toggle to a free HSV picker and hex input.
-class _ColorDialog extends StatefulWidget {
-  const _ColorDialog({required this.initial});
-  final Color initial;
-
-  @override
-  State<_ColorDialog> createState() => _ColorDialogState();
-}
-
-class _ColorDialogState extends State<_ColorDialog> {
-  late Color _picked = widget.initial;
-  bool _custom = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('Color'),
-      content: SingleChildScrollView(
-        child: _custom
-            ? ColorPicker(
-                pickerColor: _picked,
-                onColorChanged: (c) => _picked = c,
-                enableAlpha: false,
-                hexInputBar: true,
-                labelTypes: const [],
-                pickerAreaHeightPercent: 0.7,
-              )
-            : BlockPicker(
-                pickerColor: _picked,
-                onColorChanged: (c) => setState(() => _picked = c),
-              ),
-      ),
-      actions: [
-        TextButton(
-          key: const Key('custom-color'),
-          onPressed: () => setState(() => _custom = !_custom),
-          child: Text(_custom ? 'Presets' : 'Custom'),
-        ),
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel'),
-        ),
-        TextButton(
-          onPressed: () => Navigator.pop(context, _picked.withAlpha(0xFF)),
-          child: const Text('OK'),
-        ),
-      ],
-    );
-  }
-}
-
-class _PackageDialog extends StatefulWidget {
-  const _PackageDialog({required this.initial});
-  final String initial;
-
-  @override
-  State<_PackageDialog> createState() => _PackageDialogState();
-}
-
-class _PackageDialogState extends State<_PackageDialog> {
-  late final _controller = TextEditingController(text: widget.initial);
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final text = _controller.text.trim();
-    final own = text == _ownPackageId;
-    final ok = isValidPackageId(text) && !own;
-    return AlertDialog(
-      title: const Text('Package name'),
-      content: TextField(
-        key: const Key('package-field'),
-        controller: _controller,
-        autofocus: true,
-        onChanged: (_) => setState(() {}),
-        decoration: InputDecoration(
-          errorText: ok
-              ? null
-              : own
-              ? 'This ID belongs to web2apk itself'
-              : 'Use dot-separated segments like org.example.app',
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel'),
-        ),
-        TextButton(
-          onPressed: ok ? () => Navigator.pop(context, text) : null,
-          child: const Text('OK'),
-        ),
-      ],
     );
   }
 }

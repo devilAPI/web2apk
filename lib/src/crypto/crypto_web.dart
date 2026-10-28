@@ -26,6 +26,40 @@ Future<SigningKey> generateSigningKey() async {
   return _signingKeyFromPkcs8(pkcs8.toDart.asUint8List());
 }
 
+/// The imported WebCrypto key of each [SigningKey], imported once.
+final _imported = Expando<Future<web.CryptoKey>>();
+
+JSObject _rsaAlgorithm() => JSObject()
+  ..setProperty('name'.toJS, 'RSASSA-PKCS1-v1_5'.toJS)
+  ..setProperty('hash'.toJS, 'SHA-256'.toJS);
+
+/// RSASSA-PKCS1-v1_5 / SHA-256 signature of [message] with [key], made by
+/// WebCrypto: pure-Dart RSA takes about half a second under dart2js, several
+/// seconds on slow phones. Falls back to pure Dart where WebCrypto is
+/// missing (insecure context) or fails. The signature is deterministic, so
+/// both give the same bytes.
+Future<Uint8List> rsaSign(SigningKey key, Uint8List message) async {
+  try {
+    final subtle = web.window.crypto.subtle;
+    final cryptoKey = await (_imported[key] ??= subtle
+        .importKey(
+          'pkcs8',
+          key.pkcs8Der.toJS,
+          _rsaAlgorithm(),
+          false,
+          ['sign'.toJS].toJS,
+        )
+        .toDart);
+    final sig =
+        await subtle.sign(_rsaAlgorithm(), cryptoKey, message.toJS).toDart
+            as JSArrayBuffer;
+    return sig.toDart.asUint8List();
+  } catch (_) {
+    _imported[key] = null;
+    return rsaSha256Sign(key.privateKey, message);
+  }
+}
+
 SigningKey _signingKeyFromPkcs8(Uint8List der) {
   try {
     // PrivateKeyInfo ::= SEQUENCE { version, algorithm, privateKey OCTET STRING }

@@ -22,6 +22,12 @@ Uint8List buildApk({
   required Uint8List template,
   required AppSpec spec,
   required SigningKey key,
+}) => signApkV2(buildUnsignedApk(template: template, spec: spec), key);
+
+/// [buildApk] without the signature: the patched, unsigned ZIP.
+Uint8List buildUnsignedApk({
+  required Uint8List template,
+  required AppSpec spec,
 }) {
   final name = spec.name.trim();
   if (name.isEmpty) throw ArgumentError.value(spec.name, 'name', 'is empty');
@@ -62,5 +68,5 @@ Uint8List buildApk({
     }
   }
 
-  return signApkV2(writeZip(entries), key);
+  return writeZip(entries);
 }

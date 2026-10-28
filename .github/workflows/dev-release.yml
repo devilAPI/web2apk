@@ -187,7 +187,7 @@ jobs:
         run: |
           # base href stays "/"; the Pages workflow rewrites it for its sub-path
           flutter pub get
-          flutter build web --release --build-number="$BUILD_NUMBER"
+          flutter build web --wasm --release --build-number="$BUILD_NUMBER"
           tool/web_cache_bust.sh build/web "$BUILD_NUMBER"
           mkdir -p dist
           (cd build/web && zip -qr "../../dist/web2apk-${TAG}-web.zip" .)

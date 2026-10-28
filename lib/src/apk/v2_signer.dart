@@ -20,57 +20,86 @@ const _magic = 'APK Sig Block 42';
 /// not immediately followed by the EOCD, and [ArgumentError] if [zip] already
 /// carries an APK Signing Block.
 Uint8List signApkV2(Uint8List zip, SigningKey key) {
-  final eocdOffset = _findEocd(zip);
-  final bd = ByteData.sublistView(zip);
-  final cdSize = bd.getUint32(eocdOffset + 12, Endian.little);
-  final cdOffset = bd.getUint32(eocdOffset + 16, Endian.little);
-  if (cdOffset + cdSize != eocdOffset) {
-    throw const FormatException(
-      'Central directory is not immediately followed by the EOCD',
+  final plan = _V2Plan(zip, key);
+  return plan.finish(rsaSha256Sign(key.privateKey, plan.toBeSigned));
+}
+
+/// [signApkV2] with the RSA signature made by [sign] (RSASSA-PKCS1-v1_5 with
+/// SHA-256 over its argument), e.g. by the browser's native WebCrypto.
+Future<Uint8List> signApkV2With(
+  Uint8List zip,
+  SigningKey key,
+  Future<Uint8List> Function(Uint8List message) sign,
+) async {
+  final plan = _V2Plan(zip, key);
+  return plan.finish(await sign(plan.toBeSigned));
+}
+
+/// Everything of a v2 signature except the RSA signature itself.
+class _V2Plan {
+  _V2Plan(this.zip, this.key) {
+    eocdOffset = _findEocd(zip);
+    final bd = ByteData.sublistView(zip);
+    final cdSize = bd.getUint32(eocdOffset + 12, Endian.little);
+    cdOffset = bd.getUint32(eocdOffset + 16, Endian.little);
+    if (cdOffset + cdSize != eocdOffset) {
+      throw const FormatException(
+        'Central directory is not immediately followed by the EOCD',
+      );
+    }
+    if (_endsWithMagic(zip, cdOffset)) {
+      throw ArgumentError('zip already carries an APK Signing Block');
+    }
+
+    final digest = _contentDigest([
+      Uint8List.sublistView(zip, 0, cdOffset),
+      Uint8List.sublistView(zip, cdOffset, eocdOffset),
+      Uint8List.sublistView(zip, eocdOffset),
+    ]);
+    signedData = _lp(
+      _concat([
+        _lp(_lp(_concat([_u32(_algRsaPkcs1Sha256), _lp(digest)]))),
+        _lp(_lp(key.certificateDer)),
+        _lp(Uint8List(0)),
+      ]),
     );
   }
 
-  if (_endsWithMagic(zip, cdOffset)) {
-    throw ArgumentError('zip already carries an APK Signing Block');
+  final Uint8List zip;
+  final SigningKey key;
+  late final int eocdOffset;
+  late final int cdOffset;
+  late final Uint8List signedData;
+
+  /// The signature covers the signed-data payload, without its length prefix.
+  Uint8List get toBeSigned => Uint8List.sublistView(signedData, 4);
+
+  Uint8List finish(Uint8List signature) {
+    final signer = _concat([
+      signedData,
+      _lp(_lp(_concat([_u32(_algRsaPkcs1Sha256), _lp(signature)]))),
+      _lp(key.publicKeyDer),
+    ]);
+    final pairValue = _lp(_lp(signer));
+    final pair = _concat([
+      _u64(4 + pairValue.length),
+      _u32(_v2BlockId),
+      pairValue,
+    ]);
+    final magic = Uint8List.fromList(_magic.codeUnits);
+    final blockSize = pair.length + 8 + magic.length;
+    final block = _concat([_u64(blockSize), pair, _u64(blockSize), magic]);
+
+    final newEocd = Uint8List.fromList(Uint8List.sublistView(zip, eocdOffset));
+    ByteData.sublistView(newEocd)
+        .setUint32(16, cdOffset + block.length, Endian.little);
+    return _concat([
+      Uint8List.sublistView(zip, 0, cdOffset),
+      block,
+      Uint8List.sublistView(zip, cdOffset, eocdOffset),
+      newEocd,
+    ]);
   }
-
-  final entries = Uint8List.sublistView(zip, 0, cdOffset);
-  final cd = Uint8List.sublistView(zip, cdOffset, eocdOffset);
-  final eocd = Uint8List.sublistView(zip, eocdOffset);
-
-  final digest = _contentDigest([entries, cd, eocd]);
-
-  final signedData = _lp(
-    _concat([
-      _lp(_lp(_concat([_u32(_algRsaPkcs1Sha256), _lp(digest)]))),
-      _lp(_lp(key.certificateDer)),
-      _lp(Uint8List(0)),
-    ]),
-  );
-  // The signature covers the signed-data payload, without its length prefix.
-  final signature = rsaSha256Sign(
-    key.privateKey,
-    Uint8List.sublistView(signedData, 4),
-  );
-  final signer = _concat([
-    signedData,
-    _lp(_lp(_concat([_u32(_algRsaPkcs1Sha256), _lp(signature)]))),
-    _lp(key.publicKeyDer),
-  ]);
-  final pairValue = _lp(_lp(signer));
-  final pair = _concat([
-    _u64(4 + pairValue.length),
-    _u32(_v2BlockId),
-    pairValue,
-  ]);
-  final magic = Uint8List.fromList(_magic.codeUnits);
-  final blockSize = pair.length + 8 + magic.length;
-  final block = _concat([_u64(blockSize), pair, _u64(blockSize), magic]);
-
-  final newEocd = Uint8List.fromList(eocd);
-  ByteData.sublistView(newEocd)
-      .setUint32(16, cdOffset + block.length, Endian.little);
-  return _concat([entries, block, cd, newEocd]);
 }
 
 /// Whether the APK Signing Block magic ends right before [cdOffset].

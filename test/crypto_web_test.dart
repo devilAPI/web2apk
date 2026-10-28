@@ -1,9 +1,13 @@
 @TestOn('browser')
 library;
 
+import 'dart:typed_data';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:web2apk/src/apk/signing_key.dart';
-import 'package:web2apk/src/keygen/keygen.dart';
+import 'package:web2apk/src/crypto/crypto.dart';
+
+import 'fixtures/golden_key.dart';
 
 void main() {
   test('WebCrypto key generation is fast and round-trips', () async {
@@ -17,4 +21,10 @@ void main() {
     expect(k2.privateKey.modulus, k.privateKey.modulus);
     expect(k2.certificateDer, k.certificateDer);
   }, timeout: const Timeout(Duration(seconds: 90)));
+
+  test('WebCrypto signature equals the pure-Dart one', () async {
+    final k = SigningKey.fromJson(goldenKeyJson);
+    final message = Uint8List.fromList(List.generate(1000, (i) => i % 251));
+    expect(await rsaSign(k, message), rsaSha256Sign(k.privateKey, message));
+  });
 }

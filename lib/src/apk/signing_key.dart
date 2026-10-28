@@ -95,6 +95,33 @@ class SigningKey {
       .map((b) => b.toRadixString(16).padLeft(2, '0').toUpperCase())
       .join(':');
 
+  /// The private key as PKCS#8 DER (PrivateKeyInfo with an RSAPrivateKey,
+  /// CRT values included), the form WebCrypto imports.
+  Uint8List get pkcs8Der {
+    final k = privateKey;
+    final p = k.p!, q = k.q!, d = k.privateExponent!;
+    final rsa = ASN1Sequence(
+      elements: [
+        ASN1Integer(BigInt.zero),
+        ASN1Integer(k.modulus),
+        ASN1Integer(_e),
+        ASN1Integer(d),
+        ASN1Integer(p),
+        ASN1Integer(q),
+        ASN1Integer(d % (p - BigInt.one)),
+        ASN1Integer(d % (q - BigInt.one)),
+        ASN1Integer(q.modInverse(p)),
+      ],
+    );
+    return ASN1Sequence(
+      elements: [
+        ASN1Integer(BigInt.zero),
+        _algorithmIdentifier(_oidRsaEncryption),
+        ASN1OctetString(octets: rsa.encode()),
+      ],
+    ).encode();
+  }
+
   /// `n, d, p, q` as lowercase hex, `cert` as base64 DER.
   Map<String, String> toJson() => {
     'n': privateKey.modulus!.toRadixString(16),
