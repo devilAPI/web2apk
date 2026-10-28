@@ -124,6 +124,8 @@
     #about a { color: #64b5f6; }
     #splash.done { opacity: 0; pointer-events: none; }
     #splash img { width: 96px; height: 96px; border-radius: 22px; }
+    #splash p { max-width: 360px; margin: 0 16px; text-align: center; line-height: 1.5; }
+    #splash a { color: #64b5f6; }
     #splash .bar {
       width: 160px; height: 4px; border-radius: 2px; overflow: hidden;
       background: #2a2f36;
@@ -147,6 +149,22 @@
     <img src="icons/Icon-192.png" alt="">
     <div class="bar"></div>
   </div>
+  <script>
+    // Flutter's renderer is WebAssembly. Browsers that run JavaScript without
+    // a JIT (Cromite and others by default, or hardened settings) have none,
+    // and the app would never start: say so instead of loading forever.
+    if (typeof WebAssembly !== 'object') {
+      const splash = document.getElementById('splash');
+      splash.querySelector('.bar').remove();
+      const msg = document.createElement('p');
+      msg.innerHTML = 'web2apk needs WebAssembly, which this browser has turned '
+        + 'off. Allow JavaScript JIT / WebAssembly for this site in the '
+        + 'browser settings and reload, or get the app from the '
+        + '<a href="https://github.com/devilAPI/web2apk/releases">Releases</a> page.';
+      splash.appendChild(msg);
+      splash.setAttribute('aria-label', 'web2apk cannot run in this browser');
+    }
+  </script>
   <main id="about">
     <h1>web2apk – turn any website into an Android app</h1>
     <p>web2apk is a free, open-source website to APK converter. Enter a URL,
