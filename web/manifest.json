@@ -3,9 +3,9 @@
     "short_name": "web2apk",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#2196F3",
+    "background_color": "#121212",
     "theme_color": "#2196F3",
-    "description": "Build Android WebView apps from a URL.",
+    "description": "Turn any website into an Android app (APK). Free, open source, runs in your browser.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

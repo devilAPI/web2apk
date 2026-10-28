@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../apk/apk_builder.dart';
 import '../apk/app_spec.dart';
@@ -301,7 +302,28 @@ class _GeneratorPageState extends State<GeneratorPage> {
       context: context,
       applicationName: 'web2apk',
       applicationLegalese: '$_credit\n$_repoUrl',
+      children: [
+        const SizedBox(height: 16),
+        OutlinedButton.icon(
+          key: const Key('open-github'),
+          icon: const Icon(Icons.open_in_new),
+          label: const Text('Open on GitHub'),
+          onPressed: _openRepo,
+        ),
+      ],
     );
+  }
+
+  Future<void> _openRepo() async {
+    try {
+      final ok = await launchUrl(
+        Uri.parse(_repoUrl),
+        mode: LaunchMode.externalApplication,
+      );
+      if (!ok) _showError('Could not open $_repoUrl');
+    } catch (e) {
+      _showError('Could not open $_repoUrl: $e');
+    }
   }
 
   @override

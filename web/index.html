@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <!--
     If you are serving your web app in a path other than the root, change the
@@ -18,7 +18,87 @@
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="Build Android WebView apps from a URL.">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <!-- Search engines -->
+  <title>web2apk – Turn any website into an Android app (APK), free online</title>
+  <meta name="description" content="Convert any website into an installable Android app in seconds. Free, open source, no sign-up and no Android Studio: enter a URL, pick a name, color and icon, and download a signed APK.">
+  <meta name="keywords" content="website to apk, web to apk, url to apk, convert website to android app, webview app maker, make android app from website, apk builder online, pwa to apk, free apk generator">
+  <meta name="robots" content="index, follow, max-image-preview:large">
+  <meta name="author" content="devilAPI">
+  <link rel="canonical" href="https://devilapi.github.io/web2apk/">
+  <meta name="theme-color" content="#121212">
+
+  <!-- Link previews (Open Graph / social) -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="web2apk">
+  <meta property="og:url" content="https://devilapi.github.io/web2apk/">
+  <meta property="og:title" content="web2apk – Turn any website into an Android app">
+  <meta property="og:description" content="Free, open-source website to APK converter that runs in your browser. Enter a URL, choose a name, color and icon, download a signed APK.">
+  <meta property="og:image" content="https://devilapi.github.io/web2apk/og-image.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="web2apk: turn any website into an Android app">
+  <meta property="og:locale" content="en_US">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="web2apk – Turn any website into an Android app">
+  <meta name="twitter:description" content="Free, open-source website to APK converter that runs in your browser.">
+  <meta name="twitter:image" content="https://devilapi.github.io/web2apk/og-image.png">
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebApplication",
+        "name": "web2apk",
+        "url": "https://devilapi.github.io/web2apk/",
+        "description": "Convert any website into an installable Android WebView app (APK). Runs entirely in the browser; the APK is built and signed on your device.",
+        "applicationCategory": "DeveloperApplication",
+        "operatingSystem": "Web, Android, iOS, Windows, macOS, Linux",
+        "browserRequirements": "Requires JavaScript and WebAssembly",
+        "isAccessibleForFree": true,
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+        "image": "https://devilapi.github.io/web2apk/og-image.png",
+        "author": { "@type": "Person", "name": "devilAPI", "url": "https://github.com/devilAPI" },
+        "sameAs": ["https://github.com/devilAPI/web2apk"],
+        "featureList": [
+          "Website URL to Android APK",
+          "Custom app name, color and icon",
+          "Fullscreen mode without title bar",
+          "Custom package name",
+          "APK signed in the browser with your own key",
+          "Update apps in place with the same key"
+        ]
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "How do I turn a website into an Android app?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Open web2apk, enter the website URL and an app name, optionally choose a color and icon, then press Generate. You get a signed APK you can install on any Android phone." }
+          },
+          {
+            "@type": "Question",
+            "name": "Is web2apk free?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Yes. web2apk is free and open source, needs no account, and builds the APK on your own device, so your data is not uploaded to a server." }
+          },
+          {
+            "@type": "Question",
+            "name": "Do I need Android Studio or coding skills?",
+            "acceptedAnswer": { "@type": "Answer", "text": "No. web2apk builds and signs the APK directly in your browser or in the web2apk app. No SDK, no Gradle and no programming are required." }
+          },
+          {
+            "@type": "Question",
+            "name": "Can I update an app I made with web2apk?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Yes. Build it again with the same package name and signing key and Android installs it as an update. Back up your signing key to keep that possible." }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
 
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
@@ -29,7 +109,6 @@
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png"/>
 
-  <title>web2apk</title>
   <link rel="manifest" href="manifest.json">
   <style>
     html, body { background: #121212; margin: 0; height: 100%; }
@@ -39,6 +118,10 @@
       font-family: system-ui, sans-serif; color: #e3e3e3;
       transition: opacity .3s ease; z-index: 9999; background: #121212;
     }
+    /* Crawlable description of the page; the Flutter view covers it. */
+    #about { max-width: 640px; margin: 0 auto; padding: 24px 16px;
+      font-family: system-ui, sans-serif; color: #e3e3e3; line-height: 1.5; }
+    #about a { color: #64b5f6; }
     #splash.done { opacity: 0; pointer-events: none; }
     #splash img { width: 96px; height: 96px; border-radius: 22px; }
     #splash .bar {
@@ -64,6 +147,34 @@
     <img src="icons/Icon-192.png" alt="">
     <div class="bar"></div>
   </div>
+  <main id="about">
+    <h1>web2apk – turn any website into an Android app</h1>
+    <p>web2apk is a free, open-source website to APK converter. Enter a URL,
+      choose an app name, color and icon, and download a signed Android app
+      (APK) that opens the site in a full-screen WebView. No Android Studio,
+      no SDK and no sign-up: the APK is built and signed right in your
+      browser, on your own device.</p>
+    <h2>Features</h2>
+    <ul>
+      <li>Convert any website or web app (PWA) into an installable APK</li>
+      <li>Custom app name, theme color and launcher icon</li>
+      <li>Optional fullscreen mode without a title bar</li>
+      <li>Custom package name, so you can build several apps</li>
+      <li>Signed with your own key, so new builds install as updates</li>
+      <li>Live preview of the app screen and icon</li>
+      <li>Also available as an app for Android, iOS, Windows, macOS and Linux</li>
+    </ul>
+    <h2>How to make an Android app from a website</h2>
+    <ol>
+      <li>Enter the app name and the website URL.</li>
+      <li>Pick a color and an icon, and choose fullscreen if you like.</li>
+      <li>Press Generate and download or share the APK.</li>
+      <li>Install it on your Android phone.</li>
+    </ol>
+    <p>Source code and downloads:
+      <a href="https://github.com/devilAPI/web2apk">github.com/devilAPI/web2apk</a></p>
+    <noscript><p><strong>web2apk needs JavaScript to run.</strong></p></noscript>
+  </main>
   <script>
     // Fade the splash out once Flutter has drawn its first frame.
     window.addEventListener('flutter-first-frame', function () {
