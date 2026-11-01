@@ -8,6 +8,7 @@ import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
 import 'package:web2apk/src/apk/apk_builder.dart';
+import 'package:web2apk/src/apk/app_options.dart';
 import 'package:web2apk/src/apk/app_spec.dart';
 import 'package:web2apk/src/apk/signing_key.dart';
 import 'package:web2apk/src/apk/template_contract.dart';
@@ -126,6 +127,39 @@ void main() {
       ),
       throwsArgumentError,
     );
+  });
+
+  test('the version name reaches the manifest, the default stays', () async {
+    if (buildTool('aapt2') == null) {
+      markTestSkipped('Android SDK build-tools not available');
+      return;
+    }
+    final dir = Directory.systemTemp.createTempSync('apkv');
+    addTearDown(() => dir.deleteSync(recursive: true));
+    Future<String> badging(AppOptions options) async {
+      final apk = buildApk(
+        template: template,
+        spec: AppSpec(
+          name: 'V',
+          url: 'https://example.org',
+          color: 0xFF000000,
+          fullscreen: false,
+          packageId: 'org.example.web2apk',
+          options: options,
+        ),
+        key: key,
+      );
+      final f = File('${dir.path}/v.apk')..writeAsBytesSync(apk);
+      final r = await runTool('aapt2', ['dump', 'badging', f.path]);
+      expect(r.exitCode, 0, reason: '${r.stderr}');
+      return r.stdout as String;
+    }
+
+    expect(
+      await badging(const AppOptions(versionName: ' 2.5-beta ')),
+      contains("versionName='2.5-beta'"),
+    );
+    expect(await badging(const AppOptions()), contains("versionName='1.0'"));
   });
 
   test('badging, apksigner and zipalign accept the APK', () async {

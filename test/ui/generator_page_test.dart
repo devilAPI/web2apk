@@ -10,6 +10,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
 import 'package:web2apk/src/apk/signing_key.dart';
 import 'package:web2apk/src/saved_apps.dart';
+import 'package:web2apk/src/ui/advanced_settings_page.dart';
 import 'package:web2apk/src/ui/generator_page.dart';
 import 'package:web2apk/src/ui/key_page.dart';
 import 'package:web2apk/src/ui/my_apps_page.dart';
@@ -64,6 +65,12 @@ void main() {
     await tester.pump();
   }
 
+  Future<void> tapGenerate(WidgetTester tester) async {
+    await tester.ensureVisible(find.byKey(const Key('generate')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('generate')));
+  }
+
   testWidgets('package line follows URL', (tester) async {
     await pumpPage(tester, FakeActions());
     await enter(tester, 'url-field', 'example.org');
@@ -104,7 +111,7 @@ void main() {
     final store = await pumpPage(tester, actions);
     await enter(tester, 'name-field', 'Test');
     await enter(tester, 'url-field', 'example.org');
-    await tester.tap(find.byKey(const Key('generate')));
+    await tapGenerate(tester);
     await tester.pump();
     for (
       var i = 0;
@@ -138,7 +145,7 @@ void main() {
     );
     await enter(tester, 'name-field', 'Test');
     await enter(tester, 'url-field', 'example.org');
-    await tester.tap(find.byKey(const Key('generate')));
+    await tapGenerate(tester);
     await tester.pump();
     for (
       var i = 0;
@@ -304,7 +311,7 @@ void main() {
     await enter(tester, 'name-field', 'Test');
     await enter(tester, 'url-field', 'example.org');
     for (var round = 1; round <= 2; round++) {
-      await tester.tap(find.byKey(const Key('generate')));
+      await tapGenerate(tester);
       await tester.pump();
       for (
         var i = 0;
@@ -365,7 +372,7 @@ void main() {
     await pumpWith(tester, loadKey: () async => throw StateError('boom'));
     await enter(tester, 'name-field', 'Test');
     await enter(tester, 'url-field', 'example.org');
-    await tester.tap(find.byKey(const Key('generate')));
+    await tapGenerate(tester);
     await tester.pump();
     await tester.pump();
     expect(
@@ -381,7 +388,7 @@ void main() {
     await pumpWith(tester, loadKey: () => pending.future);
     await enter(tester, 'name-field', 'Test');
     await enter(tester, 'url-field', 'example.org');
-    await tester.tap(find.byKey(const Key('generate')));
+    await tapGenerate(tester);
     await tester.pump();
     expect(find.text('Preparing…'), findsOneWidget);
     expect(find.textContaining('signing key'), findsNothing);
@@ -467,7 +474,7 @@ void main() {
     await pumpWith(tester, loadKey: () => pending.future);
     await enter(tester, 'name-field', 'Test');
     await enter(tester, 'url-field', 'example.org');
-    await tester.tap(find.byKey(const Key('generate')));
+    await tapGenerate(tester);
     await tester.pump();
     for (final tip in ['My apps', 'Signing key', 'New app']) {
       final button = tester.widget<IconButton>(
@@ -481,6 +488,71 @@ void main() {
     }
     pending.completeError(StateError('stop'));
     await tester.pump();
+  });
+
+  testWidgets('Advanced settings change the preview and survive reopening', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(500, 1400));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await pumpPage(tester, FakeActions());
+    expect(find.byKey(const Key('preview-reload')), findsNothing);
+    await tester.tap(find.byKey(const Key('advanced-settings')));
+    await tester.pumpAndSettle();
+    expect(find.byType(AdvancedSettingsPage), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('reload-button')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('hide-system-bars')));
+    await tester.pump();
+    await tester.tap(find.byTooltip('Back'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('preview-reload')), findsOneWidget);
+    expect(find.byKey(const Key('preview-status-bar')), findsNothing);
+
+    await tester.tap(find.byKey(const Key('advanced-settings')));
+    await tester.pumpAndSettle();
+    final tile = tester.widget<SwitchListTile>(
+      find.byKey(const Key('reload-button')),
+    );
+    expect(tile.value, isTrue);
+    await tester.tap(find.byTooltip('Reset to defaults'));
+    await tester.pump();
+    await tester.tap(find.byTooltip('Back'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('preview-reload')), findsNothing);
+  });
+
+  testWidgets('reload button is unavailable in fullscreen', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(500, 1400));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await pumpPage(tester, FakeActions());
+    await tester.tap(find.byType(SwitchListTile));
+    await tester.pump();
+    await tester.ensureVisible(find.byKey(const Key('advanced-settings')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('advanced-settings')));
+    await tester.pumpAndSettle();
+    final tile = tester.widget<SwitchListTile>(
+      find.byKey(const Key('reload-button')),
+    );
+    expect(tile.onChanged, isNull);
+    expect(tile.value, isFalse);
+  });
+
+  testWidgets('New app resets the advanced settings', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(500, 1400));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await pumpPage(tester, FakeActions());
+    await tester.tap(find.byKey(const Key('advanced-settings')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('reload-button')));
+    await tester.pump();
+    await tester.tap(find.byTooltip('Back'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('New app'));
+    await tester.pump();
+    expect(find.byKey(const Key('preview-reload')), findsNothing);
   });
 
   testWidgets('package dialog rejects the generator\'s own id', (tester) async {

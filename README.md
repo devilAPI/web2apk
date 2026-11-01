@@ -29,6 +29,7 @@ Fill in the form and tap **Generate**:
 - **Color** - title-bar color
 - **Icon** - an image from your gallery/files (center-cropped to a square); without one the app gets the web2apk globe icon
 - **Fullscreen** - hides only the title bar; the Android status bar stays visible
+- **Advanced settings** - screen orientation, dark mode for websites (Android 13+), hide the status and navigation bars, keep the screen on, app color while loading, open other sites in the browser, loading bar, offline page with Retry, reload button, pinch to zoom, desktop mode, custom user agent and app version
 - **Preview** - a live sketch of the app screen and home-screen icon (beside the form on wide screens)
 - **Package** - shown as "Package: ... - tap to change". It is derived from the domain (`https://example.org` -> `org.example.web2apk`). Every app needs its own ID: two apps with the same ID replace each other, so change it if you build several apps for one domain.
 
@@ -68,6 +69,8 @@ flutter pub get
 flutter test
 flutter run                 # or: flutter build apk / ios / linux / windows / macos / web
 ```
+
+The template build needs JDK 21 (`JAVA_HOME=/usr/lib/jvm/java-21-openjdk scripts/build_template.sh`); newer JDKs fail in the Android build tools.
 
 Tests that verify generated APKs use `apksigner`, `aapt2` and `zipalign` from the newest build-tools under `$ANDROID_HOME`; `flutter test --platform chrome` runs the browser-compatible tests. The icons are drawn by `tool/make_icons.py` (Pillow); rerun it and `scripts/build_template.sh` after changing the icon.
 

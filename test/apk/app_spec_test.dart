@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:web2apk/src/apk/app_options.dart';
 import 'package:web2apk/src/apk/app_spec.dart';
 
 void main() {
@@ -65,6 +66,72 @@ void main() {
       'title': 'My',
       'color': '#2196F3',
       'fullscreen': true,
+      ...const AppOptions().toJson(),
+    });
+  });
+
+  group('AppOptions', () {
+    const custom = AppOptions(
+      orientation: AppOrientation.landscape,
+      darkMode: AppDarkMode.system,
+      externalLinks: true,
+      progressBar: true,
+      offlinePage: false,
+      reloadButton: true,
+      hideSystemBars: true,
+      keepScreenOn: true,
+      pinchZoom: true,
+      loadingColor: true,
+      desktopMode: true,
+      userAgent: 'UA',
+      versionName: '2.1',
+    );
+
+    test('JSON round-trip keeps every field', () {
+      final copy = AppOptions.fromJson(custom.toJson());
+      expect(copy.toJson(), custom.toJson());
+    });
+
+    test('config.json carries the options the template reads', () {
+      final config = jsonDecode(
+        const AppSpec(
+          name: 'My',
+          url: 'https://x.de',
+          color: 0xFF2196F3,
+          fullscreen: false,
+          packageId: 'de.x.web2apk',
+          options: custom,
+        ).configJson(),
+      );
+      expect(config['orientation'], 'landscape');
+      expect(config['darkMode'], 'system');
+      expect(config['hideSystemBars'], isTrue);
+      expect(config['offlinePage'], isFalse);
+      expect(config['userAgent'], 'UA');
+    });
+
+    test('missing keys and unknown values fall back to the defaults', () {
+      final defaults = const AppOptions().toJson();
+      expect(AppOptions.fromJson({}).toJson(), defaults);
+      expect(
+        AppOptions.fromJson({'orientation': 'sideways'}).toJson(),
+        defaults,
+      );
+    });
+
+    test('copyWith changes only what is given', () {
+      final changed = const AppOptions().copyWith(pinchZoom: true);
+      expect(changed.pinchZoom, isTrue);
+      expect(changed.offlinePage, isTrue);
+    });
+
+    test('user agent and version are trimmed', () {
+      final json = const AppOptions(
+        userAgent: ' a ',
+        versionName: ' 1 ',
+      ).toJson();
+      expect(json['userAgent'], 'a');
+      expect(json['versionName'], '1');
     });
   });
 }

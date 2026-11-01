@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'apk/app_options.dart';
 import 'apk/app_spec.dart';
 import 'apk/icons.dart';
 
@@ -23,6 +24,7 @@ class SavedApp {
 
   /// 192x192 PNG, or null when the app has no custom icon.
   final Uint8List? icon;
+  final AppOptions options;
   final DateTime updatedAt;
 
   const SavedApp({
@@ -33,6 +35,7 @@ class SavedApp {
     required this.packageId,
     required this.updatedAt,
     this.icon,
+    this.options = const AppOptions(),
   });
 
   /// The stored icon for [icon]: center-cropped and downscaled to 192x192.
@@ -53,12 +56,14 @@ class SavedApp {
     fullscreen: spec.fullscreen,
     packageId: spec.packageId,
     icon: spec.icon == null ? null : (icon192 ?? storedIcon(spec.icon!)),
+    options: spec.options,
     updatedAt: (now ?? DateTime.now()).toUtc(),
   );
 
   factory SavedApp.fromJson(Map<String, dynamic> json) {
     try {
       final icon = json['icon'];
+      final options = json['options'];
       return SavedApp(
         name: json['name'] as String,
         url: json['url'] as String,
@@ -66,6 +71,9 @@ class SavedApp {
         fullscreen: json['fullscreen'] as bool,
         packageId: json['packageId'] as String,
         icon: icon == null ? null : base64Decode(icon as String),
+        options: options == null
+            ? const AppOptions()
+            : AppOptions.fromJson(options as Map<String, dynamic>),
         updatedAt: DateTime.parse(json['updatedAt'] as String),
       );
     } on FormatException {
@@ -82,6 +90,7 @@ class SavedApp {
     'fullscreen': fullscreen,
     'packageId': packageId,
     'icon': icon == null ? null : base64Encode(icon!),
+    'options': options.toJson(),
     'updatedAt': updatedAt.toUtc().toIso8601String(),
   };
 }

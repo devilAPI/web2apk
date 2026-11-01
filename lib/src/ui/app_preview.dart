@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import '../apk/app_options.dart';
+
 const _defaultIconColor = Color(0xFF2196F3);
 
 /// Status bar color the template uses: each channel of [color] times 0.8.
@@ -27,6 +29,7 @@ class AppPreview extends StatelessWidget {
     required this.color,
     required this.fullscreen,
     this.icon,
+    this.options = const AppOptions(),
   });
 
   final String name;
@@ -36,6 +39,7 @@ class AppPreview extends StatelessWidget {
   final Color color;
   final bool fullscreen;
   final Uint8List? icon;
+  final AppOptions options;
 
   @override
   Widget build(BuildContext context) {
@@ -62,40 +66,68 @@ class AppPreview extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Container(
-                    key: const Key('preview-status-bar'),
-                    height: 20,
-                    color: statusBarColor(color),
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    child: Row(
-                      children: [
-                        Text(
-                          '12:00',
-                          style: TextStyle(color: onBar, fontSize: 10),
-                        ),
-                        const Spacer(),
-                        Icon(Icons.signal_cellular_alt, color: onBar, size: 11),
-                        const SizedBox(width: 3),
-                        Icon(Icons.battery_full, color: onBar, size: 11),
-                      ],
+                  if (!options.hideSystemBars)
+                    Container(
+                      key: const Key('preview-status-bar'),
+                      height: 20,
+                      color: statusBarColor(color),
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: Row(
+                        children: [
+                          Text(
+                            '12:00',
+                            style: TextStyle(color: onBar, fontSize: 10),
+                          ),
+                          const Spacer(),
+                          Icon(
+                            Icons.signal_cellular_alt,
+                            color: onBar,
+                            size: 11,
+                          ),
+                          const SizedBox(width: 3),
+                          Icon(Icons.battery_full, color: onBar, size: 11),
+                        ],
+                      ),
                     ),
-                  ),
                   if (!fullscreen)
                     Container(
                       key: const Key('preview-title-bar'),
                       height: 40,
                       color: color,
                       padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: titleColor(color),
+                                fontSize: 15,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                          if (options.reloadButton)
+                            Icon(
+                              Icons.refresh,
+                              key: const Key('preview-reload'),
+                              color: titleColor(color),
+                              size: 18,
+                            ),
+                        ],
+                      ),
+                    ),
+                  if (options.progressBar)
+                    Container(
+                      key: const Key('preview-progress'),
+                      height: 2,
                       alignment: Alignment.centerLeft,
-                      child: Text(
-                        title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: titleColor(color),
-                          fontSize: 15,
-                          fontWeight: FontWeight.w500,
-                        ),
+                      child: FractionallySizedBox(
+                        widthFactor: 0.6,
+                        heightFactor: 1,
+                        child: ColoredBox(color: color),
                       ),
                     ),
                   Expanded(

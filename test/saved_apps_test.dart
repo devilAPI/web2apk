@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:web2apk/src/apk/app_options.dart';
 import 'package:web2apk/src/apk/app_spec.dart';
 import 'package:web2apk/src/saved_apps.dart';
 
@@ -77,6 +78,35 @@ void main() {
     expect(c.icon, isNull);
   });
 
+  test('options survive a round-trip and fromSpec', () {
+    const options = AppOptions(
+      orientation: AppOrientation.portrait,
+      pinchZoom: true,
+    );
+    final saved = SavedApp.fromSpec(
+      const AppSpec(
+        name: 'N',
+        url: 'https://x.org',
+        color: 0,
+        fullscreen: false,
+        packageId: 'a.b',
+        options: options,
+      ),
+    );
+    final back = SavedApp.fromJson(
+      jsonDecode(jsonEncode(saved.toJson())) as Map<String, dynamic>,
+    );
+    expect(back.options.toJson(), options.toJson());
+  });
+
+  test('apps saved before options existed load with the defaults', () {
+    final json = app('a.b').toJson()..remove('options');
+    expect(
+      SavedApp.fromJson(json).options.toJson(),
+      const AppOptions().toJson(),
+    );
+  });
+
   test('fromSpec downscales a 4000x4000 icon to 192x192 PNG', () {
     final big = img.Image(width: 4000, height: 4000)
       ..clear(img.ColorRgba8(10, 200, 30, 255));
@@ -124,7 +154,14 @@ void main() {
   });
 
   test('wrong-shaped JSON is also a FormatException', () async {
-    for (final v in ['{"a":1}', '[1]', '[{"name":1}]']) {
+    for (final v in [
+      '{"a":1}',
+      '[1]',
+      '[{"name":1}]',
+      jsonEncode([
+        app('a.b').toJson()..['options'] = {'pinchZoom': 'yes'},
+      ]),
+    ]) {
       final s = await newStore({'saved_apps_v1': v});
       expect(s.load, throwsFormatException, reason: v);
     }

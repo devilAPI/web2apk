@@ -44,9 +44,11 @@ Uint8List buildUnsignedApk({
   final mi = indexOf(kManifestPath);
   if (mi < 0) throw const FormatException('Template has no manifest');
   final manifest = entries[mi];
+  final version = spec.options.versionName.trim();
   final patched = replaceXmlStrings(manifest.data, {
     kTemplatePackage: spec.packageId,
     kTemplateLabel: name,
+    if (version.isNotEmpty) kTemplateVersionName: version,
   });
   entries[mi] = manifest.method == 0
       ? ZipEntry.stored(manifest.name, patched)

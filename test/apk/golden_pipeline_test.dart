@@ -12,7 +12,7 @@ import '../fixtures/mini_template.dart';
 
 /// SHA-256 of the APK produced on the Dart VM; Chrome (dart2js) must match.
 const _goldenSha256 =
-    '1c85ce14bde4bffbdee093674f69679e1f62d455e901175734a281faf84ab290';
+    '917282717c06ec7ff9fc97766b0606b6bc6fca7968dff5d3efe61faf08659934';
 
 void main() {
   test('buildApk on mini template is byte-identical across platforms', () {

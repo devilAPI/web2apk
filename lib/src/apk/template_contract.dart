@@ -1,6 +1,7 @@
 /// Constants shared between the template APK and the patcher.
 const kTemplatePackage = 'de.devilapi.web2apk.template';
 const kTemplateLabel = 'WEB2APK_TEMPLATE_LABEL';
+const kTemplateVersionName = '1.0';
 const kConfigPath = 'assets/config.json';
 const kManifestPath = 'AndroidManifest.xml';
 final kIconPath = RegExp(

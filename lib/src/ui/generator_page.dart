@@ -4,12 +4,14 @@ import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../apk/app_options.dart';
 import '../apk/app_spec.dart';
 import '../apk/signing_key.dart';
 import '../apk_actions.dart';
 import '../apk_build.dart';
 import '../icon_loader.dart';
 import '../saved_apps.dart';
+import 'advanced_settings_page.dart';
 import 'app_preview.dart';
 import 'dialogs.dart';
 import 'key_page.dart';
@@ -81,6 +83,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
   final _url = TextEditingController();
   Color _color = _defaultColor;
   bool _fullscreen = false;
+  AppOptions _options = const AppOptions();
 
   /// The icon source: a square PNG from [loadIcon], or null for the default.
   Uint8List? _icon;
@@ -102,6 +105,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
     _url.text = app.url;
     _color = Color(app.color);
     _fullscreen = app.fullscreen;
+    _options = app.options;
     _icon = app.icon;
     _iconName = app.icon == null ? null : 'Saved icon';
     _iconError = null;
@@ -114,6 +118,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
     _url.clear();
     _color = _defaultColor;
     _fullscreen = false;
+    _options = const AppOptions();
     _icon = null;
     _iconName = null;
     _iconError = null;
@@ -133,6 +138,16 @@ class _GeneratorPageState extends State<GeneratorPage> {
       ),
     );
   }
+
+  Future<void> _openAdvanced() => Navigator.of(context).push(
+    MaterialPageRoute<void>(
+      builder: (_) => AdvancedSettingsPage(
+        initial: _options,
+        fullscreen: _fullscreen,
+        onChanged: (options) => setState(() => _options = options),
+      ),
+    ),
+  );
 
   Future<void> _openKeyPage() => Navigator.of(context).push(
     MaterialPageRoute<void>(
@@ -228,6 +243,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
       fullscreen: _fullscreen,
       packageId: _packageId!,
       icon: _icon,
+      options: _options,
     );
     try {
       setState(() => _progress = 'Preparing…');
@@ -331,6 +347,7 @@ class _GeneratorPageState extends State<GeneratorPage> {
             color: _color,
             fullscreen: _fullscreen,
             icon: _icon,
+            options: _options,
           );
           final form = ListView(
             padding: const EdgeInsets.all(16),
@@ -403,6 +420,15 @@ class _GeneratorPageState extends State<GeneratorPage> {
                 title: Text('Package: ${pkg ?? '—'} — tap to change'),
                 enabled: !busy,
                 onTap: _editPackage,
+              ),
+              ListTile(
+                key: const Key('advanced-settings'),
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Advanced settings'),
+                subtitle: const Text('Orientation, links, dark mode and more'),
+                trailing: const Icon(Icons.chevron_right),
+                enabled: !busy,
+                onTap: _openAdvanced,
               ),
               const SizedBox(height: 24),
               FilledButton(

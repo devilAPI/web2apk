@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'app_options.dart';
+
 /// Form data for one generated app, plus URL / package-id rules.
 class AppSpec {
   final String name;
@@ -11,6 +13,7 @@ class AppSpec {
   final bool fullscreen;
   final String packageId;
   final Uint8List? icon;
+  final AppOptions options;
 
   const AppSpec({
     required this.name,
@@ -19,6 +22,7 @@ class AppSpec {
     required this.fullscreen,
     required this.packageId,
     this.icon,
+    this.options = const AppOptions(),
   });
 
   /// Contents of `assets/config.json` in the generated APK.
@@ -29,6 +33,7 @@ class AppSpec {
       'title': name,
       'color': '#${rgb.toUpperCase()}',
       'fullscreen': fullscreen,
+      ...options.toJson(),
     });
   }
 }
